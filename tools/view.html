@@ -1,0 +1,17 @@
+<!doctype html><meta charset=utf-8><body style="margin:0;background:#888">
+<script type=importmap>{"imports":{"three":"../vendor/three.module.min.js","three/addons/":"../vendor/addons/"}}</script>
+<script type=module>
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const q=new URLSearchParams(location.search); const files=q.get('f').split(',');
+const W=360,H=300; const r=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true}); r.setSize(W*Math.min(files.length,4),H*Math.ceil(files.length/4)); document.body.appendChild(r.domElement);
+r.setScissorTest(true); r.outputColorSpace=THREE.SRGBColorSpace;
+const L=new GLTFLoader(); let i=0;
+for(const f of files){ const g=await L.loadAsync('../assets/'+f+'.glb'); const s=new THREE.Scene(); s.background=new THREE.Color(0x9aa0a8);
+ s.add(new THREE.HemisphereLight(0xffffff,0x444444,2.5)); const d=new THREE.DirectionalLight(0xffffff,2); d.position.set(3,5,4); s.add(d);
+ const b=new THREE.Box3().setFromObject(g.scene), c=b.getCenter(new THREE.Vector3()), sz=b.getSize(new THREE.Vector3()).length();
+ g.scene.position.sub(c); s.add(g.scene); const ax=new THREE.AxesHelper(sz*0.8); s.add(ax);
+ const cam=new THREE.PerspectiveCamera(40,W/H,0.01,100); cam.position.set(sz*1.1,sz*0.7,sz*0.9); cam.lookAt(0,0,0);
+ const x=(i%4)*W, y=(Math.ceil(files.length/4)-1-Math.floor(i/4))*H; r.setViewport(x,y,W,H); r.setScissor(x,y,W,H); r.render(s,cam); i++; }
+document.title='done';
+</script>

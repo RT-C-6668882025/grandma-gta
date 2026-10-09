@@ -1,0 +1,26 @@
+# macOS / Python
+.DS_Store
+__pycache__/
+
+# Raw Tripo downloads (hundreds of MB) — the game only loads the shrunk copies
+assets/raw/
+assets/studio-shots/
+assets/concept/
+
+# Copyrighted song (not redistributable). Drop your own chorus here; without it
+# the game renders a built-in 廣場舞 loop at the same BPM.
+assets/music/*.mp3
+assets/music/*.wav
+
+# Voice-generation scratch (the shipped lines are assets/voice/l/*.mp3)
+assets/voice/*.wav
+assets/voice/*.log
+assets/voice/mimo_test.py
+
+# Video production (personal narration, presenter footage, renders)
+video/
+recordings/
+shots/
+
+# Internal planning notes
+构思与技术分析.md

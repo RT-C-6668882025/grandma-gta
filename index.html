@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>阿嬤俠盜：田庄大亂鬥</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E👵%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="src/ui.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }</script>
+<style>
+#danceLane { position: fixed; left: 50%; top: 80px; width: 260px; height: 320px; margin-left: -130px; background: rgba(0,0,0,0.55); border-radius: 10px; overflow: hidden; }
+#danceLane .line { position: absolute; left: 10px; right: 10px; top: 262px; height: 4px; background: #fff; box-shadow: 0 0 12px #ff5ab4; }
+#danceLane .note { position: absolute; font-size: 38px; width: 50px; text-align: center; margin-top: -22px; transition: transform 0.1s; }
+#danceLane .note.ok { transform: scale(1.5); opacity: 0.4; }
+#danceLane .note.miss { opacity: 0.2; filter: grayscale(1); }
+#danceLane .score { position: absolute; right: 12px; top: 8px; font: 24px var(--display); color: var(--gold); }
+#danceLane .judge { position: absolute; left: 12px; top: 10px; font: 700 14px var(--sans); color: #fff; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud" class="hidden">
+  <div id="topright">
+    <div id="clockline" class="stroke"></div>
+    <div id="money" class="stroke">NT$ 0</div>
+    <div id="wanted"></div>
+    <div id="swagLine" class="stroke"></div>
+    <div id="weaponBox"></div>
+  </div>
+  <div id="mapBox">
+    <canvas id="minimap" width="250" height="160"></canvas>
+    <div id="bars"><div class="bar" id="hpBar"><i></i></div><div class="bar" id="stBar"><i></i></div></div>
+    <div id="vehBar" class="hidden"><i></i></div>
+    <div id="vehName" class="hidden"></div>
+  </div>
+  <div id="help"></div>
+  <div id="prompt"></div>
+  <div id="objective"></div>
+  <div id="subs"></div>
+  <div id="banner"></div>
+  <div id="radioPop"></div>
+  <div id="toasts"></div>
+  <div id="timer"></div>
+  <div id="counter"></div>
+  <div id="keys">Tab 背包 · T 老人機 · M 地圖 · Esc 暫停/操作說明</div>
+</div>
+<div id="danceLane" class="hidden"></div>
+<div id="panel" class="hidden"></div>
+<div id="phone" class="hidden"></div>
+<div id="dlg" class="dlg hidden"></div>
+<div id="bigmap" class="hidden"></div>
+<div id="fade"></div><div id="fadeText"></div>
+<div id="title">
+  <div class="logo stroke">阿嬤俠盜<span>田庄大亂鬥</span><em style="font-size:34px">GRANDMA THEFT AUTO · 番薯寮</em></div>
+  <div class="tag">七十二歲的秀琴阿嬤，騎三輪車、送報紙、開小黃、打流氓、搶車追詐騙、跳廣場舞搶冠軍。<br>今天是她的生日，阿水伯好像藏了什麼禮物……</div>
+  <div class="btns"><button id="bNew">新遊戲</button><button id="bCont" class="hidden">繼續</button></div>
+  <div class="credit">角色與道具：Tripo（Smart Mesh P2.0 · Combos）· 配音：小米 MiMo TTS · 引擎：Three.js<br>全部台詞、商店、品牌皆為虛構。</div>
+</div>
+<div id="loadmsg">載入中……</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

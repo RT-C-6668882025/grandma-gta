@@ -1,0 +1,149 @@
+<!doctype html><meta charset=utf-8><title>showcase</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#1e1f22}canvas{display:block}</style>
+<script type=importmap>{"imports":{"three":"../vendor/three.module.min.js","three/addons/":"../vendor/addons/"}}</script>
+<script type=module>
+// Tripo Studio–style viewport for the promo: grey radial backdrop, soft floor shadow, one character playing clips.
+// Driven frame by frame from Playwright: __sc.load(file) → __sc.clip(name) → __sc.step(dt) per frame.
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+r.setPixelRatio(1); r.setSize(innerWidth, innerHeight); r.outputColorSpace = THREE.SRGBColorSpace;
+r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.05; r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(r.domElement);
+const scene = new THREE.Scene();
+// backdrop: the dark radial grey of the Studio viewport
+const bg = document.createElement('canvas'); bg.width = 512; bg.height = 512;
+const g = bg.getContext('2d'); const gr = g.createRadialGradient(256, 230, 20, 256, 256, 380);
+gr.addColorStop(0, '#55575c'); gr.addColorStop(0.55, '#2c2d31'); gr.addColorStop(1, '#17181a');
+g.fillStyle = gr; g.fillRect(0, 0, 512, 512);
+const bt = new THREE.CanvasTexture(bg); bt.colorSpace = THREE.SRGBColorSpace; scene.background = bt;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x3a3a40, 1.6));
+const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(2.5, 5, 4); key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048); Object.assign(key.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3 }); scene.add(key);
+const rim = new THREE.DirectionalLight(0xbfd4ff, 1.0); rim.position.set(-3, 3, -4); scene.add(rim);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.ShadowMaterial({ opacity: 0.35 }));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+const cam = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.05, 100);
+const loader = new GLTFLoader();
+r.localClippingEnabled = true;
+let model = null, mixer = null, clips = {}, act = null, spin = 0, H = 1.7;
+let cast = [];            // extra characters for line-ups: {model, mixer, hips, rest}
+let hips = null, hipRest = null, lockRoot = false;
+let wipe = null;          // texture reveal: {planeTex, planeClay, ring, y}
+let skel = null, parts = null, explode = 0;
+const clay = new THREE.MeshStandardMaterial({ color: 0xd9d6d0, roughness: 0.75, metalness: 0 });
+async function loadOne(file, h) {
+  const gl = await loader.loadAsync(file);
+  const m = gl.scene; m.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+  const b = new THREE.Box3().setFromObject(m), s = h / (b.max.y - b.min.y);
+  m.scale.setScalar(s); m.position.y = -b.min.y * s;
+  const mx = new THREE.AnimationMixer(m), cl = {};
+  for (const c of gl.animations) cl[c.name.replace(/\.\d+$/, '')] = c;
+  let hp = null; m.traverse((o) => { if (o.isBone && /Hips$/.test(o.name) && !hp) hp = o; });
+  return { m, mx, cl, hp, rest: hp ? hp.position.clone() : null };
+}
+function pinHips(hp, rest) { if (hp && rest) { hp.position.x = rest.x; hp.position.z = rest.z; } }
+window.__sc = {
+  async load(file, h = 1.65) {
+    for (const o of [model, ...cast.map((c) => c.m), skel, parts, wipe?.ring]) if (o) scene.remove(o);
+    cast = []; skel = null; parts = null; wipe = null; lockRoot = false;
+    const o = await loadOne(file, h);
+    model = o.m; mixer = o.mx; clips = o.cl; hips = o.hp; hipRest = o.rest; H = h;
+    model.rotation.y = 0; spin = 0;  // Tripo characters export facing +Z
+    scene.add(model); act = null;
+    this.frame();
+    return Object.keys(clips);
+  },
+  // several characters in a row, all playing the same clip in place
+  async lineup(list, clip, gap = 1.1) {
+    for (const o of [model, ...cast.map((c) => c.m), skel, parts]) if (o) scene.remove(o);
+    model = null; mixer = null; skel = null; cast = []; spin = 0;
+    for (const [i, [file, h]] of list.entries()) {
+      const o = await loadOne(file, h);
+      o.m.position.x = (i - (list.length - 1) / 2) * gap; scene.add(o.m);
+      const c = o.cl[clip] || Object.values(o.cl)[0]; const a = o.mx.clipAction(c); a.play(); a.time = (i * 0.37) % c.duration;
+      cast.push(o);
+    }
+    H = 1.6; lockRoot = true;
+  },
+  clip(name, fade = 0.25) {
+    const c = clips[name]; if (!c) return false;
+    const a = mixer.clipAction(c); a.reset(); a.setLoop(THREE.LoopRepeat); a.play();
+    if (act && act !== a) act.crossFadeTo(a, fade, false); act = a; return c.duration;
+  },
+  inplace(on = true) { lockRoot = on; },
+  bind() { if (act) act.stop(); act = null; mixer.stopAllAction(); },  // back to the rest (T-)pose
+  spin(rate) { spin = rate; },
+  // white clay copy of every mesh + a clipping plane that sweeps up, turning clay into the textured model
+  clayWipe() {
+    const pTex = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0), pClay = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const meshes = []; model.traverse((o) => { if (o.isMesh) meshes.push(o); });
+    for (const o of meshes) {
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      for (const m of mats) { m.clippingPlanes = [pTex]; m.needsUpdate = true; }
+      const c = o.clone(); c.material = clay.clone(); c.material.clippingPlanes = [pClay];
+      if (o.isSkinnedMesh) c.bind(o.skeleton, o.bindMatrix);
+      o.parent.add(c);
+    }
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.47, 64), new THREE.MeshBasicMaterial({ color: 0x8be9ff, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
+    ring.rotation.x = -Math.PI / 2; scene.add(ring);
+    wipe = { pTex, pClay, ring }; this.wipeAt(-0.05);
+  },
+  wipeAt(y) { if (!wipe) return; wipe.pTex.constant = y; wipe.pClay.constant = -y; wipe.ring.position.y = y; wipe.ring.visible = y > 0 && y < H; },
+  // bones drawn over a see-through body
+  skeleton(on = true, bodyOpacity = 0.35) {
+    if (skel) { scene.remove(skel); skel = null; }
+    model.traverse((o) => { if (o.isMesh) { const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const m of ms) { m.transparent = on; m.opacity = on ? bodyOpacity : 1; m.depthWrite = !on; } } });
+    if (!on) return;
+    // thick glowing bones (GL lines are 1 px): a capsule per parent→child bone and a ball per joint, refreshed every frame
+    skel = new THREE.Group(); skel.renderOrder = 10; scene.add(skel);
+    const bm = new THREE.MeshBasicMaterial({ color: 0x8be9ff, depthTest: false, transparent: true, opacity: 0.95 });
+    const jm = new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false });
+    const pairs = []; model.traverse((o) => { if (o.isBone && o.parent?.isBone && !/End|Toe|Index|Middle|Ring|Pinky|Thumb|HeadTop/.test(o.name)) pairs.push([o.parent, o]); });
+    for (const pr of pairs) {
+      const b = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 1, 6), bm); b.renderOrder = 10;
+      const j = new THREE.Mesh(new THREE.SphereGeometry(0.022, 10, 8), jm); j.renderOrder = 11;
+      skel.add(b, j); b.userData.pr = pr; j.userData.bone = pr[1];
+    }
+  },
+  // static prop: every mesh is a part; explode() pushes them outward from the centre
+  async prop(file, h = 1.2) {
+    for (const o of [model, ...cast.map((c) => c.m), skel, parts]) if (o) scene.remove(o);
+    cast = []; mixer = null; skel = null;
+    const gl = await loader.loadAsync(file); const m = gl.scene;
+    const b = new THREE.Box3().setFromObject(m), s = h / (b.max.y - b.min.y), c = b.getCenter(new THREE.Vector3());
+    m.scale.setScalar(s); m.position.set(-c.x * s, -b.min.y * s, -c.z * s); H = h;
+    parts = new THREE.Group(); parts.add(m); scene.add(parts); model = parts;
+    m.updateMatrixWorld(true);
+    const ctr = new THREE.Vector3(0, h * 0.5, 0); let i = 0;
+    m.traverse((o) => { if (!o.isMesh) return; o.castShadow = true;
+      const pc = new THREE.Box3().setFromObject(o).getCenter(new THREE.Vector3());
+      o.userData.home = o.position.clone(); o.userData.dir = pc.sub(ctr).normalize().multiplyScalar(1 / s);
+      const hue = (i++ * 0.137) % 1; o.userData.tint = new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(hue, 0.65, 0.58), roughness: 0.6 }); o.userData.orig = o.material; });
+    return i;
+  },
+  tint(on) { parts?.traverse((o) => { if (o.isMesh) o.material = on ? o.userData.tint : o.userData.orig; }); },
+  explode(k) { explode = k; parts?.traverse((o) => { if (o.isMesh && o.userData.home) o.position.copy(o.userData.home).addScaledVector(o.userData.dir, k * 0.45 * H); }); },
+  frame(dist = 4.2, yaw = 0, lift = 0, look = 0.5) {
+    cam.position.set(Math.sin(yaw) * dist, H * 0.55 + lift, Math.cos(yaw) * dist); cam.lookAt(0, H * look, 0);
+  },
+  step(dt) {
+    if (mixer) mixer.update(dt);
+    if (lockRoot) pinHips(hips, hipRest);
+    for (const c of cast) { c.mx.update(dt); pinHips(c.hp, c.rest); }
+    if (model) model.rotation.y += spin * dt;
+    if (skel) {
+      model.updateMatrixWorld(true);
+      const a = new THREE.Vector3(), b = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+      for (const m of skel.children) {
+        if (m.userData.pr) { m.userData.pr[0].getWorldPosition(a); m.userData.pr[1].getWorldPosition(b);
+          const d = b.clone().sub(a), L = d.length(); m.position.copy(a).addScaledVector(d, 0.5); m.scale.set(1, Math.max(L, 1e-4), 1);
+          m.quaternion.setFromUnitVectors(up, d.normalize()); }
+        else if (m.userData.bone) m.userData.bone.getWorldPosition(m.position);
+      }
+    }
+    r.render(scene, cam);
+  },
+};
+document.title = 'ready';
+</script>

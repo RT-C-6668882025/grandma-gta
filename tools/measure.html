@@ -1,0 +1,38 @@
+<!doctype html><meta charset=utf-8><base href="../"><body style="margin:0;background:#fff">
+<script type=importmap>{"imports":{"three":"./vendor/three.module.min.js","three/addons/":"./vendor/addons/"}}</script>
+<script type=module>
+// orthographic side / front / top views of a vehicle in its game frame (front = +Z, metres), with a 10 cm grid
+import * as THREE from 'three';
+import { loadVehicles, VTYPES, Vehicle, setVehicleScene } from './src/vehicles.js';
+const type=new URLSearchParams(location.search).get('v')||'tricycle';
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0xffffff);
+scene.add(new THREE.HemisphereLight(0xffffff,0x888888,2.5));
+setVehicleScene(scene);
+await loadVehicles();
+const L=VTYPES[type].len;
+// fake terrain height: vehicles.js imports heightAt; the module's H is null until built, so stub via a tiny terrain
+const {buildTerrain}=await import('./src/world/terrain.js');
+buildTerrain(new THREE.Scene());
+const v=new Vehicle(type,0,0,0); v.pos.set(0,0,0); v.sync();
+v.root.position.set(0,0,0); v.root.updateMatrixWorld(true);
+const S=900, r=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true}); r.setSize(S*3,S); document.body.appendChild(r.domElement); r.setScissorTest(true);
+const half=Math.max(L,1.6)/2+0.2;
+const grid=(plane)=>{ const g=new THREE.Group(); const m=new THREE.LineBasicMaterial({color:0xdddddd}), m2=new THREE.LineBasicMaterial({color:0xff4444});
+  for(let i=-30;i<=30;i++){ const a=i/10, mm=i%5===0?m2:m; const p=[];
+    if(plane==='side'){ p.push(new THREE.Vector3(0.01+(-2),a+1.5,-3),new THREE.Vector3(0,a+1.5,3)); }
+  } return g; };
+const views=[['side',new THREE.Vector3(5,0.8,0),new THREE.Vector3(0,0.8,0)],['front',new THREE.Vector3(0,0.8,6),new THREE.Vector3(0,0.8,0)],['top',new THREE.Vector3(0,6,0.001),new THREE.Vector3(0,0,0)]];
+// grid lines as thin boxes in world space
+const gl=new THREE.Group(); scene.add(gl);
+const lm=(c)=>new THREE.MeshBasicMaterial({color:c});
+for(let i=-30;i<=30;i++){ const a=i/10, c=i%5===0?0xff8888:0xdddddd;
+  const bx=new THREE.Mesh(new THREE.BoxGeometry(0.003,8,0.003),lm(c)); bx.position.set(0,0,a); gl.add(bx);  // z lines (side/top)
+  const by=new THREE.Mesh(new THREE.BoxGeometry(0.003,0.003,8),lm(c)); by.position.set(-1.9,a+1.5,0); gl.add(by); // y lines (side)
+  const bxx=new THREE.Mesh(new THREE.BoxGeometry(0.003,8,0.003),lm(c)); bxx.position.set(a,0,-3); gl.add(bxx); // x lines (front)
+  const byf=new THREE.Mesh(new THREE.BoxGeometry(8,0.003,0.003),lm(c)); byf.position.set(0,a+1.5,-3); gl.add(byf); // y lines (front)
+  const bxt=new THREE.Mesh(new THREE.BoxGeometry(0.003,0.003,8),lm(c)); bxt.position.set(a,-0.5,0); gl.add(bxt); // x lines (top)
+  const bzt=new THREE.Mesh(new THREE.BoxGeometry(8,0.003,0.003),lm(c)); bzt.position.set(0,-0.5,a); gl.add(bzt); // z lines (top)
+}
+views.forEach(([n,pos,look],i)=>{ const cam=new THREE.OrthographicCamera(-half,half,half,-half,0.01,50); cam.position.copy(pos); cam.lookAt(look); r.setViewport(i*S,0,S,S); r.setScissor(i*S,0,S,S); r.render(scene,cam); });
+window.__half=half; document.title='done';
+</script>
