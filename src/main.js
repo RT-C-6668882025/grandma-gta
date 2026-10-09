@@ -17,6 +17,7 @@ import { initFx, tickFx, fx, addEmitter } from './fx.js';
 import { buildGrass } from './grass.js';
 import { buildBirds } from './birds.js';
 import { initInput, keys, mouse, hit, down, endFrame, setUiBlocking, unlock } from './input.js';
+import { initTouch } from './touch.js';
 import { OrbitCam } from './camera.js';
 import { ui, blips } from './ui.js';
 import { G, on, emit, load, save, newGame, hasSave, give, equip, addWanted, count, spend } from './game.js';
@@ -28,9 +29,13 @@ import { createLawSystem } from './law.js';
 const q = new URLSearchParams(location.search);
 const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: q.has('shots') });
-renderer.setPixelRatio(Math.min(devicePixelRatio, +(q.get('pr') || 1.5)));
+const qualityPresets = { low: { ratio: .9, shadows: false }, medium: { ratio: 1.15, shadows: false }, high: { ratio: 1.5, shadows: true } };
+let quality = navigator.maxTouchPoints > 0 ? 'medium' : 'high';
+try { const saved = localStorage.getItem('ama-quality'); if (qualityPresets[saved]) quality = saved; } catch {}
+let prMax = Math.min(devicePixelRatio, +(q.get('pr') || qualityPresets[quality].ratio));
+renderer.setPixelRatio(prMax);
 renderer.setSize(innerWidth, innerHeight);
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = qualityPresets[quality].shadows;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.08;
@@ -253,9 +258,10 @@ function tickPlayerDown(dt) {
 
 // ------------------------------------------------------------------ loop
 const clock = new THREE.Clock();
-const PR_MAX = Math.min(devicePixelRatio, +(q.get('pr') || 1.5));
-let prNow = PR_MAX, frAcc = 0, frN = 0;
+let prNow = prMax, frAcc = 0, frN = 0;
+const updateTouch = initTouch(canvas, () => ({ active: mode === 'play', playing: mode === 'play' && !ui.open && !inputLocked() && !dance.on && !player?.down, dancing: dance.on && !ui.open, toast: message => ui.toast(message) }));
 function frame() {
+  updateTouch();
   requestAnimationFrame(frame);
   const d = clock.getDelta();
   step(Math.min(d, 0.05));
@@ -265,7 +271,7 @@ function frame() {
     if (frAcc > 2.5) {
       const avg = frAcc / frN;
       if (avg > 0.021 && prNow > 0.75) { prNow = Math.max(0.75, prNow - 0.15); renderer.setPixelRatio(prNow); }
-      else if (avg < 0.0135 && prNow < PR_MAX) { prNow = Math.min(PR_MAX, prNow + 0.1); renderer.setPixelRatio(prNow); }
+      else if (avg < 0.0135 && prNow < prMax) { prNow = Math.min(prMax, prNow + 0.1); renderer.setPixelRatio(prNow); }
       frAcc = 0; frN = 0;
     }
   }
@@ -444,15 +450,22 @@ function pauseHtml() {
     <b>車輛</b>：F 上車/搶車/下車 · W/S 油門倒車 · A/D 轉向 · 空白鍵 剎車/喇叭 · R 換電台<br>
     <b>介面</b>：Tab 背包 · T 老人機 · M 地圖 · 1-9 選對話 · Esc 暫停</div>
     <div class="row"><div><div class="nm">聲音</div></div><div class="acts"><button data-a="mute">${audio.muted ? '打開聲音' : '靜音'}</button></div></div>
-    <div class="row"><div><div class="nm">畫質</div><div class="ds">低畫質會關閉陰影</div></div><div class="acts"><button data-a="q-low">低</button><button data-a="q-high">高</button></div></div>
+    <div class="row"><div><div class="nm">畫質</div><div class="ds">目前：${quality} · 自動調整解析度，低 / 中關閉陰影</div></div><div class="acts"><button data-a="q-low">低</button><button data-a="q-medium">中</button><button data-a="q-high">高</button></div></div>
     <div class="row"><div><div class="nm">重新開始</div><div class="ds">清除存檔，從生日早上重來</div></div><div class="acts"><button data-a="reset">重新開始</button></div></div>`;
 }
 function bindPause(el) {
   el.querySelectorAll('[data-a]').forEach((b) => (b.onclick = () => {
     const a = b.dataset.a;
     if (a === 'mute') { audio.setMuted(!audio.muted); ui.panel('暫停', pauseHtml(), bindPause); }
-    if (a === 'q-low') { renderer.setPixelRatio(1); renderer.shadowMap.enabled = false; scene.traverse((o) => o.material && (o.material.needsUpdate = true)); }
-    if (a === 'q-high') { renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); renderer.shadowMap.enabled = true; scene.traverse((o) => o.material && (o.material.needsUpdate = true)); }
+    if (a.startsWith('q-') && qualityPresets[a.slice(2)]) {
+      quality = a.slice(2);
+      try { localStorage.setItem('ama-quality', quality); } catch {}
+      prMax = Math.min(devicePixelRatio, qualityPresets[quality].ratio);
+      prNow = prMax; frAcc = frN = 0; renderer.setPixelRatio(prNow);
+      renderer.shadowMap.enabled = qualityPresets[quality].shadows;
+      scene.traverse(o => { for (const material of (Array.isArray(o.material) ? o.material : [o.material])) if (material) material.needsUpdate = true; });
+      ui.panel('暫停', pauseHtml(), bindPause);
+    }
     if (a === 'reset') { newGame(); location.reload(); }
   }));
 }
