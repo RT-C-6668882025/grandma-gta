@@ -6,7 +6,7 @@
 广场舞斗舞、蓝白拖连击、抢车、被警察追、抓大鹅……全部由 AI 工具链制作：
 **Tripo** 做 3D 角色与动作，**Claude Code** 写游戏，**Three.js** 渲染。
 
-[English](README.en.md) · [▶ 观看预告片](https://github.com/andyhuo520/grandma-gta/releases/tag/v1.0.0) · [快速开始](#快速开始) · [制作工作流](#制作工作流)
+**[🎮 在线试玩](https://andyhuo520.github.io/grandma-gta/)** · [English](README.en.md) · [▶ 观看预告片](https://github.com/andyhuo520/grandma-gta/releases/tag/v1.0.0) · [快速开始](#快速开始) · [制作工作流](#制作工作流)
 
 ![Three.js](https://img.shields.io/badge/Three.js-r180-black?logo=three.js)
 ![No build](https://img.shields.io/badge/build-none-brightgreen)
@@ -52,7 +52,9 @@
 
 ## 快速开始
 
-不用安装依赖，也不用构建。只要有 Python 3 和一个现代浏览器就能玩。
+直接打开 **https://andyhuo520.github.io/grandma-gta/** 就能玩（首次加载约 80 MB 模型，推荐用电脑上的 Chrome）。
+
+想在本地运行的话，不用安装依赖，也不用构建，只要有 Python 3 和一个现代浏览器：
 
 ```bash
 git clone https://github.com/andyhuo520/grandma-gta.git

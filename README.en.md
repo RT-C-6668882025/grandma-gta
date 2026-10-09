@@ -6,7 +6,7 @@
 Square-dance battles, flip-flop combos, carjacking, police chases and goose wrangling.
 It was all built with an AI toolchain: **Tripo** made the 3D characters and motions, **Claude Code** wrote the game, and **Three.js** renders it.
 
-[中文](README.md) · [▶ Watch the trailer](https://github.com/andyhuo520/grandma-gta/releases/tag/v1.0.0) · [Quick start](#quick-start) · [Workflow](#workflow)
+**[🎮 Play online](https://andyhuo520.github.io/grandma-gta/)** · [中文](README.md) · [▶ Watch the trailer](https://github.com/andyhuo520/grandma-gta/releases/tag/v1.0.0) · [Quick start](#quick-start) · [Workflow](#workflow)
 
 <a href="https://github.com/andyhuo520/grandma-gta/releases/tag/v1.0.0">
   <img src="docs/media/hero-skill-cards.gif" width="800" alt="Trailer opening: skill cards for square dance, slap, carjack, run and Auntie Xiuqin">
