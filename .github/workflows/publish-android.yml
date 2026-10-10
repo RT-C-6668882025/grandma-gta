@@ -1,0 +1,26 @@
+name: Publish Android Release
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/publish-android.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Download verified APK
+        run: gh run download 38027873254 --name grandma-gta-god-apk --dir apk
+      - name: Publish v1.0.0-god
+        run: |
+          cat > notes.md <<'NOTES'
+          无敌版：无敌与无限体力、当前车辆保护、无限钱、2/4/8 倍速度、自由飞行。
+          Android 8.0 及以上，离线资源，横屏游玩。需要支持 WebGL 和现代 JavaScript 的 Android System WebView。
+          这是个人测试签名安装包，已通过构建和签名验证，尚未完成真机验证。
+          NOTES
+          gh release create v1.0.0-god apk/grandma-gta-god.apk --target 41e62ff74e02cac0be1c345d7dd22446c6f2735c --title '阿嬤俠盜 · 无敌版 1.0' --notes-file notes.md
