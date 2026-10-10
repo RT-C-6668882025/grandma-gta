@@ -1,3 +1,4 @@
+import { GOODS, price as economyPrice, totalMoney, tickEconomy, economyRound, pickupCargo, deliverCargo, issueMoney } from './economy.js';
 import { MOD, setPower, applyPowers } from './mods.js';
 import { CAMERA_LABELS } from './camera-modes.js';
 // 阿嬤俠盜：田庄大亂鬥 — bootstrap and main loop.
@@ -314,7 +315,9 @@ function step(d) {
     return;
   }
   applyPowers(player, G);
+  if (!ui.open && !inputLocked() && !dance.on && !player.down) tickEconomy(G.economy,d);
   // ---------- global keys
+  if (hit('KeyN')) { if (ui.open) ui.close(); else openEconomy(); }
   if (hit('KeyO')) { if (ui.open) ui.close(); else openPowers(); }
   if (!ui.open && hit('KeyV')) { if (player.veh) exitVehicle(); setPower('fly', !MOD.fly); player.diving = null; ui.toast(MOD.fly ? '飛行開啟：PageUp 上升，PageDown 下降' : '飛行關閉'); }
   if (hit('Escape')) { if (ui.open) ui.close(); else { unlock(); ui.panel('暫停', pauseHtml(), bindPause); } }
@@ -493,7 +496,8 @@ document.getElementById('cameraButton').onclick = switchCamera;
 function openPowers() {
   unlock();
   const labels = { invincible: '無敵 / 無限體力（包含當前車輛）', money: '無限錢', speed: '超速', fly: '飛行（步行模式）' };
-  ui.panel('超能力 · GOD MODE', `<div class="note">O 能力選單 · V 切換飛行 · PageUp 上升 / PageDown 下降。觸屏也有上升、下降按鈕。飛行關閉後回到地面。</div>${Object.entries(labels).map(([key,label]) => `<div class="row"><div class="nm">${label}</div><button data-power="${key}">${MOD[key] ? '已開啟' : '已關閉'}</button></div>`).join('')}<div class="row"><div class="nm">速度倍率</div><select id="powerSpeed" aria-label="速度倍率">${[2,4,8].map(n=>`<option value="${n}" ${MOD.multiplier === n ? 'selected' : ''}>${n} 倍</option>`).join('')}</select></div>`, el => {
+  ui.panel('超能力 · GOD MODE', `<div class="note">O 能力選單 · V 切換飛行 · PageUp 上升 / PageDown 下降。觸屏也有上升、下降按鈕。飛行關閉後回到地面。</div><div class="row"><div class="nm">小鎮經濟 · N</div><button id="openEconomy">查看 / 送貨</button></div>${Object.entries(labels).map(([key,label]) => `<div class="row"><div class="nm">${label}</div><button data-power="${key}">${MOD[key] ? '已開啟' : '已關閉'}</button></div>`).join('')}<div class="row"><div class="nm">速度倍率</div><select id="powerSpeed" aria-label="速度倍率">${[2,4,8].map(n=>`<option value="${n}" ${MOD.multiplier === n ? 'selected' : ''}>${n} 倍</option>`).join('')}</select></div>`, el => {
+    el.querySelector('#openEconomy').onclick = openEconomy;
     el.querySelectorAll('[data-power]').forEach(button => { button.onclick = () => {
       const key = button.dataset.power;
       if (key === 'fly' && !MOD.fly && player.veh) exitVehicle();
@@ -503,6 +507,31 @@ function openPowers() {
   });
 }
 document.getElementById('powersButton').onclick = () => { if (mode === 'play') { if (ui.open) ui.close(); else openPowers(); } };
+function openEconomy() {
+  unlock(); const e=G.economy;
+  const near=p=>Math.hypot(player.pos.x-p.x,player.pos.z-p.z)<12;
+  ui.panel('小鎮經濟 · NT$', `<div class="note">第 ${e.round} 輪 · 遊玩中每 15 秒推進一輪，暫停 / 選單不推進。12 戶居民是經濟模擬帳戶，尚未綁定場景 NPC 動作。</div>
+    <div class="row"><div>阿嬤的小鎮錢包（有限）</div><b>NT$${e.player}</b></div>
+    <div class="note">無限錢保留原玩法；麵包、汽水、寶力大補改用小鎮錢包並消耗真實庫存。任務收入仍屬原錢包。</div>
+    <div class="row"><div>流通貨幣 / 累計增發</div><b>NT$${totalMoney(e)} / ${e.issued}</b></div>
+    <div class="note">生產商 ${e.producer} · 商店 ${e.shop} · 公庫 ${e.bank} · 居民 ${e.households.reduce((n,h)=>n+h.cash,0)} · 未滿足需求 ${e.households.filter(h=>h.hunger>0).length} 戶</div>
+    ${Object.entries(GOODS).map(([id,g])=>`<div class="row"><div>${g.name}<div class="ds">商店 ${e.stock[id]} · 倉庫 ${e.warehouse[id]}</div></div><b>NT$${economyPrice(e,id)}</b></div>`).join('')}
+    <div class="row"><div>送貨 · 菜市場領取 → 柑仔店交貨<div class="ds">攜帶 ${e.cargo} 份麵包 · 商店支付運費 NT$40</div></div><div class="acts"><button data-e="pickup" ${near(P.market)&&!e.cargo?'':'disabled'}>領貨</button><button data-e="deliver" ${near(P.shop)&&e.cargo?'':'disabled'}>交貨</button><button data-e="route">導航</button></div></div>
+    <div class="row"><div>經濟實驗</div><div class="acts"><button data-e="step">推進一輪</button><button data-e="supply">${e.supply?'停止生產':'恢復生產'}</button><button data-e="issue">增發 NT$1,000</button></div></div>
+    <div class="note">價格受庫存與增發量影響。增發係數是實驗規則，尚未包含完整金融市場。停止生產後倉庫會逐步耗盡。</div>
+    <div class="note">${e.logs.map(x=>`第 ${x.round} 輪 · ${x.message}`).join('<br>')||'小鎮經濟剛啟動'}</div>`,el=>{
+      el.querySelectorAll('[data-e]').forEach(button=>button.onclick=()=>{
+        const action=button.dataset.e;
+        if(action==='route'){ui.close();const p=e.cargo?P.shop:P.market;ui.toast(e.cargo?'送到柑仔店，能力 → 小鎮經濟 → 交貨':'到菜市場，能力 → 小鎮經濟 → 領貨');const old=blips.findIndex(b=>b.label==='送貨');if(old>=0)blips.splice(old,1);blips.push({x:p.x,z:p.z,icon:'📦',color:'#f2c230',label:'送貨',route:true});return;}
+        if(action==='pickup'&&near(P.market))pickupCargo(e);
+        if(action==='deliver'&&near(P.shop)&&!deliverCargo(e))ui.toast('商店資金不足，暫時無法收貨',true);
+        if(action==='step')economyRound(e);
+        if(action==='supply')e.supply=e.supply?0:1;
+        if(action==='issue')issueMoney(e);
+        doSave();openEconomy();
+      });
+    });
+}
 function pauseHtml() {
   return `<div class="note" style="font-size:14px;line-height:1.9">
     <b>視角</b>：C / 視角按鈕切換三種視角；Z 回正；滾輪調整距離。移動轉視角模式下，把滑鼠停在畫面邊緣會持續轉向，移回中央停止。<br>

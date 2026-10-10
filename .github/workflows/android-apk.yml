@@ -28,24 +28,17 @@ jobs:
           name: grandma-gta-phone-tablet-apk
           path: android/build/grandma-gta-phone-tablet.apk
           retention-days: 30
-      - name: Publish phone touch edition
+      - name: Publish town economy edition
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
+          if gh release view v1.4.0-economy >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
-          **适用设备：Android 手机 / 平板通用版（Android 8.0+）。**
-          安装包：grandma-gta-phone-tablet.apk，同一个 APK 同时适配手机和平板。
-          手机横竖屏紧凑布局；模拟摇杆支持斜向与轻推慢走。移动、滑动转视角和动作支持多指同时操作。
-          常用动作保持在右侧，飞行、升降、补药、回正等收进「更多」。保留三种视角、自由鼠标转向和全部无敌能力。
-          构建和签名校验通过，尚未完成真机验证。个人测试签名与旧版不同，已安装旧版时需要卸载后安装，本地存档会清除。
+          手机 / 平板通用版 · Android 8.0+。
+          小镇货币系统第一版：12 户居民经济账户、有限钱包、工资 / 消费 / 补货、库存价格、送货运费与增发实验。
+          按 N 或能力菜单 → 小镇经济打开；手机也可通过「更多」进入。菜市场领货，柑仔店交货。
+          三种商品接入真实库存与小镇钱包，原无敌钱包和任务收入独立；NPC 经济行为尚未绑定场景动作。
+          自动测试、构建与签名校验通过；真机验证待完成。测试签名可能与旧版不同，卸载重装会清除存档。
           NOTES
-          if gh release view v1.3.0-phone >/dev/null 2>&1; then
-            asset_id=$(gh api repos/$GH_REPO/releases/tags/v1.3.0-phone --jq '.assets[] | select(.name == "grandma-gta-god.apk") | .id')
-            if [ -n "$asset_id" ]; then
-              gh api --method PATCH "repos/$GH_REPO/releases/assets/$asset_id" -f name=grandma-gta-phone-tablet.apk -f label='手机 / 平板通用版 · Android 8.0+'
-            fi
-            gh release edit v1.3.0-phone --title '阿嬤俠盜 · 手机 / 平板通用版 1.3' --notes-file notes.md
-            exit 0
-          fi
-          gh release create v1.3.0-phone android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 手机 / 平板通用版 1.3' --notes-file notes.md
+          gh release create v1.4.0-economy android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 手机 / 平板通用版 1.4 · 小镇经济' --notes-file notes.md

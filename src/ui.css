@@ -237,3 +237,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #111; color:
   .touch-layout #touchStick { width: 96px; height: 96px; }
   .touch-layout .touch-actions, .touch-layout .touch-more { width: 180px; }
 }
+
+@media (max-height: 400px) and (orientation: landscape) {
+  .touch-layout .touch-more { width: 264px; grid-template-columns: repeat(4,minmax(0,1fr)); }
+}

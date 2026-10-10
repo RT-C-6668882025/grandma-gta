@@ -1,3 +1,4 @@
+import { GOODS, buyGood } from './economy.js';
 import { DANCE_MUSIC } from './audio.js';
 // Town life and missions. Missions are async scripts: they await lines of
 // dialogue (MiMo voice + subtitles), arrivals, fights and timers. The tick
@@ -230,7 +231,8 @@ function openShop(title, where) {
   ui.shop(title, stock, buys, {
     buy: (id) => {
       const it = ITEMS[id], p = priceOf(id);
-      if (!spend(p)) { ui.toast('錢不夠啦！', true); return; }
+      if (GOODS[id] && !buyGood(G.economy,id,p)) { ui.toast('小鎮錢包不足或商品缺貨，按 N 查看經濟 / 接送貨工作', true); return; }
+      if (!GOODS[id] && !spend(p)) { ui.toast('錢不夠啦！', true); return; }
       give(id, id === 'cig' ? 10 : 1);
       ctx.audio.play('cash');
       ui.toast(`買了 ${it.icon} ${it.name}`, 'money');

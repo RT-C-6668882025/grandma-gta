@@ -1,3 +1,4 @@
+import { createEconomy, restoreEconomy, price as marketPrice } from './economy.js';
 import { MOD, MONEY_FLOOR } from './mods.js';
 // Game state: money (NT$), backpack, what 阿嬤 wears, wanted level (八卦值),
 // story progress. Saved to localStorage. Tiny event bus for the UI and story.
@@ -8,6 +9,7 @@ const KEY = 'ama-gta-save-v1';
 function fresh() {
   return {
     money: 150,
+    economy: createEconomy(),
     inv: { slipper: 2, soda: 1 },
     owned: { straw: 1, floral: 1, fist: 1, bag: 1 },   // wearables owned (not consumed)
     eq: { hat: 'straw', glasses: null, chain: null, top: 'floral', bag: 'bag', weapon: 'fist' },
@@ -29,7 +31,7 @@ export function newGame() { G = fresh(); try { localStorage.removeItem(KEY); } c
 export function load() {
   try {
     const s = JSON.parse(localStorage.getItem(KEY) || 'null');
-    if (s) { G = Object.assign(fresh(), s); G.eq = Object.assign(fresh().eq, s.eq); }
+    if (s) { G = Object.assign(fresh(), s); G.eq = Object.assign(fresh().eq, s.eq); G.economy = restoreEconomy(s.economy); }
   } catch (e) {}
   emit('changed');
   return G;
@@ -57,7 +59,7 @@ export const swag = () => swagOf(G.eq) + (G.flags.smoking ? 8 : 0);
 export function priceOf(id) {
   const it = ITEMS[id];
   const disc = Math.min(0.25, swag() * 0.004);
-  return Math.max(1, Math.round(it.price * (1 - disc)));
+  return Math.max(1, Math.round((marketPrice(G.economy,id) ?? it.price) * (1 - disc)));
 }
 export function sellPrice(id, where) {
   const it = ITEMS[id];

@@ -5,7 +5,7 @@ export function initTouch(canvas, state) {
   const root = document.createElement('div');
   root.id = 'touchControls'; root.hidden = true;
   const primary = [['KeyJ','攻擊'],['KeyE','互動'],['KeyF','上下車'],['ShiftLeft','奔跑'],['Space','罵人'],['KeyG','投擲']];
-  const secondary = [['KeyV','飛行'],['PageUp','上升'],['PageDown','下降'],['KeyH','補藥'],['KeyQ','痞步'],['KeyR','電台'],['KeyX','抽菸'],['KeyB','檳榔'],['KeyZ','視角回正']];
+  const secondary = [['KeyN','小鎮經濟'],['KeyV','飛行'],['PageUp','上升'],['PageDown','下降'],['KeyH','補藥'],['KeyQ','痞步'],['KeyR','電台'],['KeyX','抽菸'],['KeyB','檳榔'],['KeyZ','視角回正']];
   const buttons = actions => actions.map(([key,label])=>`<button type="button" data-key="${key}">${label}</button>`).join('');
   root.innerHTML = `<div class="touch-tools">${buttons([['Escape','暫停'],['Tab','背包'],['KeyT','手機'],['KeyM','地圖']])}<button type="button" id="touchToggle">觸控：開</button><button type="button" id="touchMore" aria-controls="touchMorePanel" aria-expanded="false">更多</button></div><div class="touch-play"><div id="touchStick" aria-label="移動搖桿"><i></i></div><div class="touch-actions">${buttons(primary)}</div><div id="touchMorePanel" class="touch-more" hidden>${buttons(secondary)}</div></div><div class="touch-dance">${buttons([['ArrowLeft','←'],['ArrowUp','↑'],['ArrowDown','↓'],['ArrowRight','→']])}</div><div class="rotate-hint">建議橫屏 · 左側移動，滑動畫面轉視角</div>`;
   document.body.append(root);
