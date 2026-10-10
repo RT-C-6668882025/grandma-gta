@@ -1,3 +1,4 @@
+import {event} from './economy-ledger.js';
 import {itemQuote} from './world-economy.js';
 import {canPay,shopCurrency,fiatPrice,coinPrice} from './town-currency.js';
 import {mountMap} from './map-panel.js';
@@ -70,7 +71,7 @@ export const ui = {
     };
     c.font = 'bold 15px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
     if(this.navigation?.path?.length){c.strokeStyle='#f2c230';c.lineWidth=2;c.beginPath();this.navigation.path.forEach((p,i)=>{const [x,y]=toScreen(p.x,p.z);i?c.lineTo(x,y):c.moveTo(x,y);});c.stroke();}
-    for (const b of blips) {
+    for (const b of [...blips,...(this.navigation?[{...this.navigation,route:true,color:'#ffdd44',icon:'◎'}]:[])]) {
       let [x, y] = toScreen(b.x, b.z);
       const out = x < 8 || x > W - 8 || y < 8 || y > H - 8;
       if (out && !b.route) continue;
@@ -90,6 +91,7 @@ export const ui = {
     if (G.wanted > 0) { c.strokeStyle = (performance.now() / 300) % 2 < 1 ? '#e0402e' : '#2a6ae0'; c.lineWidth = 6; c.strokeRect(0, 0, W, H); }
   },
   toast(msg, kind = '') {
+    event(G.economy,'游戏',String(msg).replace(/<[^>]*>/g,''));
     const d = document.createElement('div');
     d.className = 'toast ' + (kind === true ? 'bad' : kind || '');
     d.innerHTML = msg;
@@ -118,6 +120,7 @@ export const ui = {
     this._subs = setTimeout(() => (e.innerHTML = ''), dur * 1000);
   },
   banner(title, sub = '', reward = '', fail = false, dur = 4) {
+    event(G.economy,'任务',[title,sub,reward].join(' · ').replace(/<[^>]*>/g,''));
     const e = this.el.banner;
     e.innerHTML = `<div class="big stroke ${fail ? 'fail' : ''}">${title}</div>${sub ? `<div class="sub stroke">${sub}</div>` : ''}${reward ? `<div class="reward stroke">${reward}</div>` : ''}`;
     e.classList.remove('show'); void e.offsetWidth; e.classList.add('show');
@@ -202,12 +205,12 @@ export const ui = {
         const owned = it.slot && G.owned[id];
         const world=G.economy.world?.enabled,quote=world?itemQuote(G.economy,where,id,it.price):null;
         const p = world?quote.amount:priceOf(id), available = world?quote.stock>0&&G.economy.industries[where==='mart'?'shop':where]?.open!==false&&canPay(G.economy,'player',quote.currency,p): !GOODS[id] || G.economy.stock[id]>0 && (G.economy.coinMode?G.economy.industries?.shop?.open!==false&&canPay(G.economy,'player',shopCurrency(G.economy),p):G.economy.player>=p);
-        cards += `<div class="card"><div class="ci">${it.icon}</div><div style="flex:1"><div class="cn">${it.name}${id === 'cig' ? '（一包 10 支）' : ''}</div><div class="cd">${it.desc}</div>${it.swag ? `<div class="cs">痞度 +${it.swag}</div>` : ''}${it.dmg && it.slot ? `<div class="cs" style="color:#f2c230">攻擊 ${it.dmg}</div>` : ''}<div class="cb"><span class="price">${(world?quote.currency==='beta':GOODS[id]&&shopCurrency(G.economy)==='beta')?'BETA ':'NT$'}${p}${world ? ` · 库存 ${quote.stock}` : GOODS[id] ? ` · 庫存 ${G.economy.stock[id]}${G.economy.coinMode?' · NT$'+fiatPrice(G.economy,id)+' / '+coinPrice(G.economy,id)+' BETA':''}` : ''}</span>${owned ? '<button disabled>已擁有</button>' : `<button data-buy="${id}" ${!world&&!GOODS[id] && G.money < p || !available ? 'disabled' : ''}>買</button>`}</div></div>${it.stack && count(id) ? `<div class="cq">×${count(id)}</div>` : ''}</div>`;
+        cards += `<div class="card"><div class="ci">${it.icon}</div><div style="flex:1"><div class="cn">${it.name}${id === 'cig' ? '（一包 10 支）' : ''}</div><div class="cd">${it.desc}</div>${it.swag ? `<div class="cs">痞度 +${it.swag}</div>` : ''}${it.dmg && it.slot ? `<div class="cs" style="color:#f2c230">攻擊 ${it.dmg}</div>` : ''}<div class="cb"><span class="price">${(world?quote.currency==='beta':GOODS[id]&&shopCurrency(G.economy)==='beta')?'GOD ':'NT$'}${p}${world ? ` · 库存 ${quote.stock}` : GOODS[id] ? ` · 庫存 ${G.economy.stock[id]}${G.economy.coinMode?' · NT$'+fiatPrice(G.economy,id)+' / '+coinPrice(G.economy,id)+' GOD':''}` : ''}</span>${owned ? '<button disabled>已擁有</button>' : `<button data-buy="${id}" ${!world&&!GOODS[id] && G.money < p || !available ? 'disabled' : ''}>買</button>`}</div></div>${it.stack && count(id) ? `<div class="cq">×${count(id)}</div>` : ''}</div>`;
       } else for (const id of buys) {
         const it = ITEMS[id], n = count(id), quote=G.economy.world?.enabled?itemQuote(G.economy,where,id,sellPrice(id,where)):null,p=quote?.amount??sellPrice(id,where);
-        cards += `<div class="card"><div class="ci">${it.icon}</div><div style="flex:1"><div class="cn">${it.name}</div><div class="cd">${it.desc}</div><div class="cb"><span class="price">${quote?.currency==='beta'?'BETA ':'NT$'}${p}</span><button data-sell="${id}" ${n ? '' : 'disabled'}>賣一個</button><button data-sellall="${id}" ${n ? '' : 'disabled'}>全賣</button></div></div><div class="cq">×${n}</div></div>`;
+        cards += `<div class="card"><div class="ci">${it.icon}</div><div style="flex:1"><div class="cn">${it.name}</div><div class="cd">${it.desc}</div><div class="cb"><span class="price">${quote?.currency==='beta'?'GOD ':'NT$'}${p}</span><button data-sell="${id}" ${n ? '' : 'disabled'}>賣一個</button><button data-sellall="${id}" ${n ? '' : 'disabled'}>全賣</button></div></div><div class="cq">×${n}</div></div>`;
       }
-      return `${buys.length ? `<div class="tabs"><button data-tab="buy" class="${tab === 'buy' ? 'on' : ''}">買東西</button><button data-tab="sell" class="${tab === 'sell' ? 'on' : ''}">賣東西</button></div>` : ''}<div class="grid">${cards}</div><div class="note">小鎮錢包 NT$${G.economy.player} / ${G.economy.crypto.holders.player} BETA（全商品接入产业库存与钱包；双币兑换受公库储备限制） · 痞度 ${swag()}：打 ${Math.round(Math.min(0.25, swag() * 0.004) * 100)} 折扣。</div>`;
+      return `${buys.length ? `<div class="tabs"><button data-tab="buy" class="${tab === 'buy' ? 'on' : ''}">買東西</button><button data-tab="sell" class="${tab === 'sell' ? 'on' : ''}">賣東西</button></div>` : ''}<div class="grid">${cards}</div><div class="note">小鎮錢包 NT$${G.economy.player} / ${G.economy.crypto.holders.player} GOD（全商品接入产业库存与钱包；双币兑换受公库储备限制） · 痞度 ${swag()}：打 ${Math.round(Math.min(0.25, swag() * 0.004) * 100)} 折扣。</div>`;
     };
     const bind = (b) => {
       b.querySelectorAll('[data-tab]').forEach((x) => (x.onclick = () => { tab = this._shopTab = x.dataset.tab; this.shop(title, stock, buys, act, where); }));

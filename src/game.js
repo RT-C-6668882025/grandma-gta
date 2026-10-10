@@ -1,4 +1,4 @@
-import {transfer} from './economy-ledger.js';
+import {transfer,event} from './economy-ledger.js';
 import { createEconomy, restoreEconomy, price as marketPrice } from './economy.js';
 import { MOD, MONEY_FLOOR } from './mods.js';
 // Game state: money (NT$), backpack, what 阿嬤 wears, wanted level (八卦值),
@@ -26,7 +26,7 @@ function fresh() {
 export let G = fresh();
 const listeners = {};
 export const on = (ev, fn) => (listeners[ev] = listeners[ev] || []).push(fn);
-export const emit = (ev, ...a) => (listeners[ev] || []).forEach((f) => f(...a));
+export const emit = (ev, ...a) => {if(['money','item','wanted','ko','carCrash','save'].includes(ev))event(G.economy,'游戏',ev+' · '+a.map(v=>typeof v==='object'?(v?.name||v?.def?.name||'对象'):String(v)).join(' · '));(listeners[ev] || []).forEach((f) => f(...a));};
 
 export function newGame() { G = fresh(); try { localStorage.removeItem(KEY); } catch (e) {} emit('changed'); return G; }
 export function load() {

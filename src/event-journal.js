@@ -1,0 +1,12 @@
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+export function openJournal(ui,e){
+ ui.panel('世界日志',`<div class="note">记录决策、后续变化、产业状态、就业、收支和游戏事件。随存档保留最近 10,000 条；可导出。决策反馈记录同期变化，不把相关性当作唯一因果。</div><div class="row"><select id="logKind"><option value="">全部事件</option>${['决策','决策反馈','轮次','产业','就业','收支','游戏','任务','交易','发行','挖矿','资产','失败','导航'].map(t=>`<option>${t}</option>`).join('')}</select><input id="logSearch" placeholder="搜索人物、产业、操作"><button id="logExport">导出日志</button><button id="logPrev">上一页</button><span id="logPage"></span><button id="logNext">下一页</button></div><div id="logRows"></div>`,root=>{
+ let page=0,last=0;
+ const label=o=>o?.startsWith('i:')?e.world.places.find(d=>d.id===o.slice(2))?.name||o:o?.startsWith('h:')?e.households[+o.slice(2)]?.name+' #'+o.slice(2):({player:'玩家',bank:'公库',producer:'生产商',shop:'原商店',cryptoEscrow:'交易托管'})[o]||o||'发行';
+ const describe=r=>r.message+(r.amount?' · '+label(r.from)+' → '+label(r.to)+' · '+r.amount+' '+r.currency:'');
+ const draw=()=>{const type=root.querySelector('#logKind').value,q=root.querySelector('#logSearch').value;const rows=(e.events||[]).filter(r=>(!type||r.type===type)&&describe(r).includes(q));page=Math.max(0,Math.min(page,Math.ceil(rows.length/40)-1));root.querySelector('#logPage').textContent=(page+1)+' / '+Math.max(1,Math.ceil(rows.length/40))+' · '+rows.length+' 条';root.querySelector('#logRows').innerHTML=rows.slice(page*40,page*40+40).map(r=>`<div class="row"><div><small>第 ${r.round} 轮 · ${esc(r.type)} · #${r.id}</small><div>${esc(describe(r))}</div></div></div>`).join('')||'<p>暂无匹配事件</p>';last=e.eventSerial;};
+ root.querySelector('#logKind').onchange=root.querySelector('#logSearch').oninput=()=>{page=0;draw();};root.querySelector('#logPrev').onclick=()=>{page--;draw();};root.querySelector('#logNext').onclick=()=>{page++;draw();};
+ root.querySelector('#logExport').onclick=()=>{const text=JSON.stringify(e.events||[],null,2);ui.panel('日志导出', '<div class="note">长按文本可全选复制，适用于离线 APK。</div><button id="selectLogs">全选日志</button><button id="backLogs">返回日志</button><textarea id="logDump" readonly></textarea>',r=>{r.querySelector('#logDump').value=text;r.querySelector('#selectLogs').onclick=()=>{const t=r.querySelector('#logDump');t.focus();t.select();};r.querySelector('#backLogs').onclick=()=>openJournal(ui,e);});};
+ ui.developmentRefresh=()=>{if(last!==e.eventSerial)draw();};draw();
+ },'development-panel');ui.developmentLive=true;
+}

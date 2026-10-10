@@ -29,8 +29,8 @@ export function createResidentScene({ground=()=>0}={}){
     },
     advanceFar(n,dt){
       if(n.economyId===undefined||n.down||n.veh||['fight','flee'].includes(n.state)||!n.economyPath?.length)return;
-      const p=n.economyPath[0],d=distance(n.pos,p),step=Math.min(d,(n.speedWalk||1.2)*dt);if(d>.001){n.pos.x+=(p.x-n.pos.x)/d*step;n.pos.z+=(p.z-n.pos.z)/d*step;n.pos.y=ground(n.pos.x,n.pos.z);}
+      if(distance(n.pos,n.economyPath[0])<2){n.economyPath.shift();if(!n.economyPath.length)return;}const p=n.economyPath[0],d=distance(n.pos,p),step=Math.min(d,(n.speedWalk||1.2)*dt);if(d>.001){n.pos.x+=(p.x-n.pos.x)/d*step;n.pos.z+=(p.z-n.pos.z)/d*step;n.pos.y=ground(n.pos.x,n.pos.z);}
     },
-    markers(e){return e.households.map(h=>({id:h.uid,x:h.location?.x??residentHome(h.id).x,z:h.location?.z??residentHome(h.id).z,label:h.name,category:'resident',color:h.job==='mine'?'#cc8bff':h.job==='rest'?'#a9b6bf':'#5de0ae',detail:`${h.uid} · ${h.placed?'場景居民':'後台居民'} · ${h.job==='mine'?'挖礦':h.job==='rest'?'休息':'生產'} · NT$${h.cash} · ${e.crypto.holders['h:'+h.id]} BETA` }));}
+    markers(e){return e.households.map(h=>({id:h.uid,x:h.location?.x??residentHome(h.id).x,z:h.location?.z??residentHome(h.id).z,label:h.name,category:'resident',color:h.job==='mine'?'#cc8bff':h.job==='rest'?'#a9b6bf':'#5de0ae',detail:`${h.uid} · ${h.placed?'場景居民':'後台居民'} · ${h.job==='mine'?'挖礦':h.job==='rest'?'休息':'生產'} · NT$${h.cash} · ${e.crypto.holders['h:'+h.id]} GOD` }));}
   };
 }

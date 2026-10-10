@@ -1,5 +1,5 @@
 // Reuse town businesses. This module adds settlement rules, never new geometry.
-import {cashOf,transfer} from './economy-ledger.js';
+import {cashOf,transfer,event,decision} from './economy-ledger.js';
 export const INDUSTRIES=[
   {id:'market',name:'菜市場生產合作社',kind:'production',x:-60,z:-40},
   {id:'shop',name:'阿桃柑仔店',kind:'retail',x:-24,z:-13},
@@ -18,6 +18,7 @@ export function ensureIndustries(e){
 export function coinTransfer(e,from,to,amount,reason){
   const c=e.crypto;
   if(from===to||!Number.isSafeInteger(amount)||amount<=0||!Object.hasOwn(c.holders,from)||!Object.hasOwn(c.holders,to)||c.holders[from]<amount||!Number.isSafeInteger(c.holders[to]+amount))return false;
+  event(e,'收支',reason,{from,to,amount,currency:'GOD'});
   c.holders[from]-=amount;c.holders[to]+=amount;
   const identity=k=>k.startsWith('h:')?e.households[Number(k.slice(2))]?.uid||k:k;
   e.coinSequence=(e.coinSequence||0)+1;e.coinLedger ||= [];
@@ -26,7 +27,7 @@ export function coinTransfer(e,from,to,amount,reason){
 export const exchangeRate=e=>e.ratePolicy?.mode==='fixed'?e.ratePolicy.value:e.crypto.price;
 export function setExchangeRate(e,mode,value){
   if(!['fixed','market'].includes(mode)||mode==='fixed'&&(!Number.isSafeInteger(value)||value<1||value>100000))return false;
-  const previous=exchangeRate(e);e.ratePolicy={mode,value:mode==='fixed'?value:e.crypto.price};
+  const previous=exchangeRate(e);decision(e,'汇率 '+previous+' → '+(mode==='fixed'?value:e.crypto.price)+'（'+(mode==='fixed'?'固定':'市场')+'）');e.ratePolicy={mode,value:mode==='fixed'?value:e.crypto.price};
   e.rateHistory ||= [];e.rateHistory.unshift({round:e.round,mode,previous,value:exchangeRate(e)});e.rateHistory.length=Math.min(60,e.rateHistory.length);return true;
 }
 export const toCoins=(e,nt)=>Math.max(1,Math.ceil(nt/exchangeRate(e)));
@@ -39,7 +40,7 @@ export function exchange(e,owner,side,quantity){
   if(!c.enabled||owner==='bank'||!Object.hasOwn(c.holders,owner)||!['buy','sell'].includes(side)||!Number.isSafeInteger(quantity)||quantity<=0||!Number.isSafeInteger(nt)||nt<=0)return false;
   const from=side==='buy'?owner:'bank',to=side==='buy'?'bank':owner,coinFrom=side==='buy'?'bank':owner,coinTo=side==='buy'?owner:'bank';
   if(!Number.isSafeInteger(cashOf(e,from))||!Number.isSafeInteger(cashOf(e,to))||cashOf(e,from)<nt||!Number.isSafeInteger(cashOf(e,to)+nt)||c.holders[coinFrom]<quantity||!Number.isSafeInteger(c.holders[coinTo]+quantity))return false;
-  transfer(e,from,to,nt,'兌換 '+quantity+' BETA @ '+rate);
+  transfer(e,from,to,nt,'兌換 '+quantity+' GOD @ '+rate);
   coinTransfer(e,coinFrom,coinTo,quantity,'兌換 NT$'+nt+' @ '+rate);
   e.exchanges ||= [];e.exchanges.unshift({round:e.round,owner,side,quantity,rate,nt});e.exchanges.length=Math.min(60,e.exchanges.length);return true;
 }

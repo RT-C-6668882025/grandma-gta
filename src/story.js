@@ -152,9 +152,9 @@ function populate() {
   for (let i = 0; i < 6; i++) { const n = npc('auntie', square.x - 8 + (i % 3) * 5, square.z + 2 + Math.floor(i / 3) * 4, { role: 'dancer', name: '土風舞阿姨', ry: Math.PI }); n.phase = i * 0.7; if (i === 0) npcs.meiling = n; }
   // pedestrians along the main street / market / square
   const kinds = ['farmer', 'auntie', 'aunt2', 'man2', 'oldman', 'farmer', 'auntie'];
-  for (let i = 0; i < 26; i++) {
-    const s = spawnSpots[Math.floor(Math.random() * spawnSpots.length)];
-    npc(kinds[i % kinds.length], s[0], s[1], { role: 'ped', name: '路人' });
+  for (let i = 0; i < (G.economy.world?.populationTarget||160)-38; i++) {
+    const s = spawnSpots[i % spawnSpots.length];
+    npc(kinds[i % kinds.length], s[0], s[1], { role: 'ped', name: '居民 '+(i+1) });
   }
   // farmers in the fields
   for (const [x, z] of [[20, 90], [140, 110], [-100, 150], [40, 160]]) npc('farmer', x, z, { role: 'ped', name: '農夫' });

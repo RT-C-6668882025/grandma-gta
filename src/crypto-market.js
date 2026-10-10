@@ -1,10 +1,11 @@
-import {cashOf,transfer} from './economy-ledger.js';
+import {cashOf,transfer,event} from './economy-ledger.js';
 import {INDUSTRIES} from './town-currency.js';
 export const INITIAL_COINS=2100;
 export function createCrypto(count=24){return {rules:2,enabled:false,supply:INITIAL_COINS,reserve:100,minted:0,authority:'player',issuance:[],price:10,previous:10,serial:0,volume:0,holders:{player:2000,bank:0,...Object.fromEntries(Array.from({length:count},(_,i)=>['h:'+i,0]))},orders:[],trades:[]};}
 export function totalCoins(c){return Object.values(c.holders).reduce((a,b)=>a+b,0)+c.orders.filter(o=>o.side==='sell').reduce((a,o)=>a+o.quantity,0)+(c.reserve||0);}
 export function mintCoins(e,actor,quantity,destination='player'){
   const c=e.crypto;if(actor!==c.authority||actor!=='player'||!c.enabled||!Number.isSafeInteger(quantity)||quantity<1||quantity>1000000||c.supply+quantity>1000000000||!['player','reserve'].includes(destination))return false;
+  event(e,'发行','增发 '+quantity+' GOD → '+destination);
   c.supply+=quantity;c.minted+=quantity;if(destination==='reserve')c.reserve+=quantity;else c.holders.player+=quantity;
   c.issuance.unshift({round:e.round,quantity,destination});c.issuance.length=Math.min(40,c.issuance.length);return true;
 }
@@ -14,7 +15,7 @@ export function mineRound(e){
   for(let n=0;n<count&&c.reserve>0;n++){
     const h=e.households[(n+e.round)%count];if(h.job!=='mine'||h.present===false||!(e.coinMode?e.supply>0:transfer(e,'h:'+h.id,'producer',2,'挖礦電費')))continue;
     h.miningProgress=(h.miningProgress||0)+1;
-    if(h.miningProgress>=3){h.miningProgress-=3;h.mined=(h.mined||0)+1;c.holders['h:'+h.id]++;c.reserve--;}
+    if(h.miningProgress>=3){h.miningProgress-=3;h.mined=(h.mined||0)+1;c.holders['h:'+h.id]++;c.reserve--;event(e,'挖矿',h.name+' 获得 1 GOD');}
   }
 }
 export function cancelOrder(e,id,owner){const c=e.crypto,o=c.orders.find(o=>o.id===id&&o.owner===owner);if(!o)return false;if(o.side==='buy')transfer(e,'cryptoEscrow',owner,o.quantity*o.price,'撤銷買單退款');else c.holders[owner]+=o.quantity;c.orders=c.orders.filter(x=>x!==o);return true;}
@@ -31,9 +32,10 @@ export function matchOrders(e){
     let bid,ask;for(const b of bids){const a=asks.find(a=>a.price<=b.price&&a.owner!==b.owner);if(a){bid=b;ask=a;break;}}
     if(!bid)break;
     const quantity=Math.min(bid.quantity,ask.quantity),price=bid.id<ask.id?bid.price:ask.price;
-    if(!transfer(e,'cryptoEscrow',ask.owner,quantity*price,'BETA 成交貨款'))throw new Error('交易託管餘額不一致');
+    if(!transfer(e,'cryptoEscrow',ask.owner,quantity*price,'GOD 成交貨款'))throw new Error('交易託管餘額不一致');
     const refund=quantity*(bid.price-price);if(refund&&!transfer(e,'cryptoEscrow',bid.owner,refund,'成交價差退款'))throw new Error('交易退款餘額不一致');
     c.holders[bid.owner]+=quantity;bid.quantity-=quantity;ask.quantity-=quantity;c.previous=c.price;c.price=price;c.volume+=quantity;
+    event(e,'交易','GOD 成交 '+quantity+' 枚 @ NT$'+price,{buyer:bid.owner,seller:ask.owner});
     c.trades.unshift({round:e.round,buyer:bid.owner,seller:ask.owner,quantity,price});c.trades.length=Math.min(60,c.trades.length);c.orders=c.orders.filter(o=>o.quantity>0);
   }
 }

@@ -31,7 +31,7 @@ function element(key) {
   const handlers=new Map(), classes=new Set();
   return {dataset:{key},style:{},hidden:false,handlers,attributes:{},
     classList:{add:v=>classes.add(v),remove:v=>classes.delete(v),toggle:(v,on)=>on?classes.add(v):classes.delete(v),contains:v=>classes.has(v)},
-    addEventListener:(type,fn)=>handlers.set(type,fn),setPointerCapture(){},setAttribute(name,v){this.attributes[name]=v;},
+    addEventListener:(type,fn)=>handlers.set(type,fn),append(){},setPointerCapture(){},setAttribute(name,v){this.attributes[name]=v;},
     closest:()=>key && !['Escape','Tab','KeyT','KeyM'].includes(key),getBoundingClientRect:()=>({left:0,top:0,width:100}),
     fire(type,id,x=50,y=50){handlers.get(type)?.({pointerId:id,pointerType:'touch',clientX:x,clientY:y,preventDefault(){}});}};
 }
@@ -39,11 +39,11 @@ test('wired controls support three fingers and reset across background, resize a
   const globals=new Map(), buttons=['KeyJ','KeyF','Space'].map(element),pad=element(),knob=element(),more=element(),drawer=element(),toggle=element(),canvas=element(),root=element();
   drawer.hidden=true;pad.querySelector=()=>knob;root.querySelector=s=>({'#touchStick':pad,'#touchMore':more,'#touchMorePanel':drawer,'#touchToggle':toggle}[s]||buttons.find(b=>s.includes(b.dataset.key)));
   root.querySelectorAll=s=>s==='[data-key]'?buttons:buttons.filter(b=>b.classList.contains('held'));
-  globalThis.document={hidden:false,body:{append(){},classList:element().classList},createElement:()=>root,addEventListener:(t,fn)=>globals.set(t,fn)};
+  globalThis.document={hidden:false,body:{append(){},classList:element().classList},createElement:tag=>tag==='label'?{set innerHTML(v){},querySelector:()=>({})}:root,addEventListener:(t,fn)=>globals.set(t,fn)};
   Object.defineProperty(globalThis,'navigator',{value:{maxTouchPoints:5},configurable:true});globalThis.addEventListener=(t,fn)=>globals.set(t,fn);
   const state={active:true,playing:true,dancing:false,driving:false},update=initTouch(canvas,()=>state);update();input.resetInput();
   const start=()=>{pad.fire('pointerdown',1,50,0);canvas.fire('pointerdown',2);buttons[0].fire('pointerdown',3);};
-  start();canvas.fire('pointermove',2,80,40);assert.equal(touchMove.y,-1);assert.equal(input.down('KeyJ'),true);assert.equal(input.mouse.dx,30);
+  start();canvas.fire('pointermove',2,80,40);assert.equal(touchMove.y,-1);assert.equal(input.down('KeyJ'),true);assert.equal(input.mouse.dx,10.5);
   canvas.fire('pointerup',2);assert.equal(touchMove.y,-1);buttons[0].fire('pointerup',3);assert.equal(input.down('KeyJ'),false);pad.fire('pointerup',1);assert.equal(touchMove.y,0);
   more.onclick();assert.equal(drawer.hidden,false);assert.equal(more.attributes['aria-expanded'],'true');
   for(const event of ['blur','resize','visibilitychange']){start();document.hidden=true;globals.get(event)();assert.equal(touchMove.y,0);assert.equal(input.down('KeyJ'),false);assert.equal(drawer.hidden,true);}
@@ -51,3 +51,5 @@ test('wired controls support three fingers and reset across background, resize a
   state.playing=true;update();buttons[0].fire('pointerdown',4);buttons[0].fire('pointerup',4);assert.equal(buttons[0].classList.contains('held'),false);
   state.driving=true;update();assert.equal(buttons[1].textContent,'下車');assert.equal(buttons[2].textContent,'剎車 / 喇叭');
 });
+
+test('eight-way touch movement locks forward and diagonals without overspeed',()=>{assert.deepEqual(stickVector(8,-100,100,true),{x:0,y:-1});const d=stickVector(80,-100,100,true);assert.ok(Math.abs(d.x+d.y)<1e-9);assert.ok(Math.abs(Math.hypot(d.x,d.y)-1)<1e-9);});

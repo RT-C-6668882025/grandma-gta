@@ -274,3 +274,33 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #111; color:
 .development-stats small { color:#a9bac8; margin-bottom:6px; }
 #developmentLedger { white-space:pre-line; }
 #developmentChart svg { width:100%; max-height:160px; }
+
+/* One toolbar owns all menu entries; gameplay thumb zones remain independent. */
+#gameBar {position:fixed;top:max(8px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:14;display:flex;align-items:center;gap:5px;max-width:72vw;padding:5px;border:1px solid #ffffff25;background:#111c22dd;border-radius:14px;}
+#gameBar[hidden]{display:none}#gameBar button {min-height:36px;color:#eee;background:#25333d;border:1px solid #ffffff20;border-radius:8px;padding:6px 10px;white-space:nowrap;font:12px var(--sans)}
+#gameBar #displayTools,#gameBar .touch-tools {position:static;transform:none;display:flex;gap:4px;max-width:none;width:auto;flex-wrap:wrap;}
+#gameBar .touch-tools{display:none} .touch-layout #gameBar .touch-tools{display:flex}
+#gameBar #displayTools{display:none}#gameBar.expanded{flex-wrap:wrap}#gameBar.expanded #displayTools{display:flex}
+#gameBar .touch-tools{display:none}.touch-layout #gameBar.expanded .touch-tools{display:flex}
+#gameBar #economyLiveHUD{position:static!important;transform:none!important;max-width:45vw!important;overflow:hidden;text-overflow:ellipsis}
+#gameBar #mouseMode{display:none}.has-mouse #gameBar #mouseMode{display:block}
+#navigationHint{top:68px;max-width:55vw}#topright,.touch-layout #topright{top:78px;right:14px}#money,.touch-layout #money{font-size:26px}
+#panel{max-height:calc(100dvh - 24px);overflow:hidden;z-index:30}.pbody{max-height:calc(100dvh - 100px);overflow:auto;padding-bottom:28px}#panel .row{flex-wrap:wrap;gap:8px}#panel select{max-width:100%}#issueTarget{max-width: min(520px,70vw)}
+.touch-layout #displayTools{bottom:auto}.touch-layout #touchStick{width:clamp(112px,15vw,174px);height:clamp(112px,15vw,174px);left:8vw;bottom:10vh;background:#18232c55;border:2px solid #ffffff45}
+.stick-label{position:absolute;top:-24px;white-space:nowrap;font-size:11px;color:#ddd;pointer-events:none}
+.touch-layout .touch-actions{display:block;width:clamp(230px,28vw,370px);height:clamp(180px,28vh,270px);right:5vw;bottom:7vh;max-width:none;pointer-events:none}
+.touch-layout .touch-actions button{position:absolute;border-radius:50%;width:clamp(52px,5.5vw,80px);height:clamp(52px,5.5vw,80px);padding:4px;font-size:12px;pointer-events:auto;background:#18232c99}
+.touch-actions [data-key="KeyJ"]{right:22%;bottom:32%;width:clamp(72px,7vw,102px)!important;height:clamp(72px,7vw,102px)!important;border:2px solid #f2c23080!important}
+.touch-actions [data-key="KeyE"]{right:50%;bottom:12%}.touch-actions [data-key="KeyF"]{right:0;bottom:35%}.touch-actions [data-key="KeyG"]{right:20%;bottom:0}.touch-actions [data-key="Space"]{right:0;bottom:0}.touch-actions [data-key="ShiftLeft"]{right:52%;bottom:65%}
+.touch-layout #mapBox{top:76px;bottom:auto;left:16px;width:clamp(110px,15vw,185px)}.touch-layout #minimap{width:100%;height:auto;aspect-ratio:1.55}
+.touch-layout #objective{bottom:20px;max-width:40vw;font-size:14px}.touch-layout #subs{bottom:75px;max-width:40vw}.touch-layout #prompt{bottom:125px;max-width:38vw}
+.touch-layout .touch-more{bottom:38vh;right:5vw;width:270px}.touch-settings{grid-column:1/-1;display:flex;align-items:center;gap:6px;font-size:12px}.touch-settings input{width:140px}
+#help{top:80px;max-width:32vw}#gameBar.expanded~#navigationHint{top:110px}
+@media(max-height:500px){#gameBar{max-width:90vw;top:4px;padding:3px}#gameBar button{min-height:30px;font-size:11px;padding:4px 7px}.touch-layout #topright{top:52px}.touch-layout #clockline{font-size:10px}.touch-layout #money{font-size:20px}.touch-layout #mapBox{top:52px;width:100px}.touch-layout #touchStick{left:7vw;bottom:8vh;width:106px;height:106px}.touch-layout .touch-actions{width:225px;height:170px;bottom:6vh;right:4vw}.touch-layout .touch-actions button{width:48px;height:48px;min-height:0;font-size:11px}.touch-layout .touch-actions [data-key="KeyJ"]{width:68px!important;height:68px!important}#navigationHint{top:46px;font-size:11px}.touch-layout #objective{bottom:8px;font-size:12px}.touch-layout #prompt{bottom:75px}.touch-layout #subs{bottom:46px;font-size:12px}}
+
+.touch-device #gameBar.expanded .touch-tools{display:flex}#gameBar .touch-tools button{pointer-events:auto}#logDump{width:100%;height:55vh;user-select:text;background:#14202d;color:#fff;padding:12px}
+
+.touch-layout #gameBar:not(.expanded) .touch-tools{display:none}
+#touchControls .touch-actions button{border-radius:50%}
+#gameBar.expanded{max-height:45vh;overflow:auto}#gameBar.expanded #displayTools,#gameBar.expanded .touch-tools{flex:1 0 100%;justify-content:center}
+.touch-actions [data-key="KeyE"]{right:60%;bottom:12%}.touch-actions [data-key="KeyG"]{right:26%;bottom:0}

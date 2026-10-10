@@ -1,3 +1,5 @@
+import {roadRoute,distance} from './map-navigation.js';
+import {ROADS} from './world/layout.js';
 import {resident} from './residents.js';
 import {transfer} from './economy-ledger.js';
 import {attachWorld} from './world-economy.js';
@@ -16,7 +18,7 @@ export function createWorldBindings(){
       const h=e.households[n.worldHousehold];if(!h)continue;
       h.sceneActor=true;h.active=true;h.placed=true;h.name=n.name||'居民';h.role=n.role==='ped'&&n.name==='農夫'?'farmer':n.role;h.unavailable=!!(n.down||n.hostile||['fight','flee'].includes(n.state));h.present=!h.unavailable;h.location={x:n.pos.x,z:n.pos.z};n.economyId=h.id;n.residentUid=h.uid;
       // Ambient workers commute to their real employer; story NPC behavior has priority.
-      if(n.role==='ped'&&!h.unavailable&&!n.veh&&h.industry){const d=e.world.places.find(d=>d.id===h.industry);if(d&&Math.hypot(d.x-n.pos.x,d.z-n.pos.z)>5){n.goal=[d.x,d.z];n.state='walk';n.stateT=60;}}
+      if(n.role==='ped'&&!h.unavailable&&!n.veh&&h.industry){const d=e.world.places.find(d=>d.id===h.industry);if(d){if(n.economyEmployer!==d.id){n.economyEmployer=d.id;n.economyPath=roadRoute(ROADS,n.pos,d).slice(1);}while(n.economyPath?.length&&distance(n.pos,n.economyPath[0])<3)n.economyPath.shift();const next=n.economyPath?.[0];if(next){n.goal=[next.x,next.z];n.state='walk';n.stateT=60;}}}
     }
     const old=new Map(e.world.assets.map(a=>[a.id,a]));
     e.world.assets=[...vehicles.map((v,index)=>{const id=v.worldAsset||('vehicle:'+(assetSerial++)),prev=old.get(id);v.worldAsset=id;if(prev?.owner==='player')v.owner='ama';return {...prev,id,index,kind:'vehicle',type:v.type,name:v.def.name,x:v.pos.x,z:v.pos.z,available:!v.broken&&v.hp>0,moving:Math.abs(v.speed)>0.5,owner:prev?.owner||(v.owner==='ama'?'player':'market'),assigned:prev?.assigned||false,price:prices[v.type]||500};}),...animals.map((a,index)=>{const id=a.worldAsset||('animal:'+(assetSerial++));a.worldAsset=id;return {...old.get(id),id,index,kind:'animal',type:a.sp,name:({dog:'狗',cat:'猫',rooster:'鸡',goose:'鹅',buffalo:'水牛'})[a.sp],x:a.pos.x,z:a.pos.z,available:!a.down&&!a.parked,owner:old.get(id)?.owner||'market',price:a.sp==='buffalo'?500:50};}),...equipment.map(a=>({...a,...old.get(a.id)}))];

@@ -6,7 +6,7 @@ test('tapping a map marker starts navigation immediately; dragging does not',()=
   const ctx=new Proxy({}, {get:()=>()=>{},set:()=>true});
   const canvas={getContext:()=>ctx,getBoundingClientRect:()=>({left:0,top:0,width:580,height:580}),setPointerCapture(){}};
   const search={value:''},filter={value:'all'},results={replaceChildren(){}},label={},go={};
-  const nodes={'canvas':canvas,'#mapSearch':search,'#mapFilter':filter,'#mapResults':results,'#mapSelection':label,'[data-map="go"]':go};
+  const nodes={'canvas':canvas,'#mapSearch':search,'#mapFilter':filter,'#mapResults':results,'#mapSelection':label,'[data-map="go"]':go,'[data-map="teleport"]':{}};
   const el={querySelector:s=>nodes[s],querySelectorAll:()=>[]};let calls=[];
   const old={d:globalThis.devicePixelRatio,r:globalThis.ResizeObserver};globalThis.devicePixelRatio=1;globalThis.ResizeObserver=class{observe(){}disconnect(){}};
   try{

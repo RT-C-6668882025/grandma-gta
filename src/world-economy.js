@@ -1,5 +1,5 @@
 // Pure economic rules. Scene adapters supply identities and availability; no renderer dependency.
-import {transfer} from './economy-ledger.js';
+import {transfer,event} from './economy-ledger.js';
 import {ensureIndustries,settle,exchangeRate,toCoins,coinTransfer} from './town-currency.js';
 export const SECTOR_NAMES={food:'食品',retail:'零售',tools:'制造维修',health:'医疗',leisure:'休闲',recycling:'回收',farm:'农业',housing:'住宅',transport:'交通',public:'公共服务',storage:'仓储'};
 export function sectorOf(d){
@@ -39,6 +39,7 @@ export function worldService(e,id,nt,reason,owner='player'){
   const b=e.industries?.[id];if(!b||!b.open)return false;
   const currency=e.coinMode?b.currency:'ntd';if(!settle(e,owner,'i:'+id,nt,currency,reason))return false;
   const paid=currency==='beta'?toCoins(e,nt):nt;b[currency==='beta'?'revenue':'revenueNT']+=paid;
+  if(owner==='player'||owner.startsWith('h:'))e.metrics.gdp=(e.metrics.gdp||0)+nt;
   e.metrics.sales+=(currency==='beta'?paid*exchangeRate(e):paid);return true;
 }
 const shopFor=where=>({mart:'shop',cloth:'cloth'}[where]||where);
@@ -49,7 +50,7 @@ export function tradeItem(e,where,id,quantity,side,base){
   if(side==='buy'&&(stock<quantity||b.stock<quantity))return false;
   if(!settle(e,side==='buy'?'player':'i:'+key,side==='buy'?'i:'+key:'player',q.nt*quantity,q.currency,(side==='buy'?'购买 ':'出售 ')+id))return false;
   b.items[id]=stock+(side==='buy'?-quantity:quantity);b.stock+=side==='buy'?-quantity:quantity;b.units+=quantity;
-  if(side==='buy'){const paid=q.currency==='beta'?toCoins(e,q.nt*quantity):q.nt*quantity;b[q.currency==='beta'?'revenue':'revenueNT']+=paid;e.metrics.sales+=q.currency==='beta'?paid*exchangeRate(e):paid;}
+  if(side==='buy'){e.metrics.gdp=(e.metrics.gdp||0)+q.nt*quantity;const paid=q.currency==='beta'?toCoins(e,q.nt*quantity):q.nt*quantity;b[q.currency==='beta'?'revenue':'revenueNT']+=paid;e.metrics.sales+=q.currency==='beta'?paid*exchangeRate(e):paid;}
   else if(['cardboard','bottle'].includes(id)){e.world.recycled=(e.world.recycled||0)+quantity;}
   return true;
 }
@@ -68,8 +69,8 @@ export function worldRound(e){
   const bySector={};for(const d of ds)(bySector[d.sector] ||= []).push(d);
   const assets=w.assets||[],transport=assets.filter(a=>a.kind==='vehicle'&&a.available),livestock=assets.filter(a=>a.kind==='animal'&&a.available&&['rooster','goose','buffalo'].includes(a.type));
   const workingTransport=transport.filter(a=>a.moving||a.assigned).length;
-  const m=e.metrics;Object.assign(m,{services:0,tax:0,unpaid:0,logistics:workingTransport,active:active.length});
-  for(const d of ds){const b=e.industries[d.id];b.staff=0;b.roundSales=0;b.roundOutput=0;b.reason=b.open?(b.cash+(e.crypto.holders['i:'+d.id]||0)*rate<28?'缺少运营资金':'缺少员工'):'已停业';}
+  const m=e.metrics;Object.assign(m,{gdp:0,services:0,tax:0,unpaid:0,logistics:workingTransport,active:active.length});
+  for(const d of ds){const b=e.industries[d.id];b.staff=0;b.roundSales=0;b.roundOutput=0;b.reason=b.open?(b.cash+(e.crypto.holders['i:'+d.id]||0)*rate<28?'缺少运营资金':(['housing','storage'].includes(d.sector)?'无需员工':'等待招聘')):'已停业';}
   const employable=ds.filter(d=>!['housing','storage'].includes(d.sector)&&e.industries[d.id].open);
   // Job vacancies follow existing scene roles. Residents may change employers when firms run out of cash.
   for(const h of active){
@@ -83,7 +84,7 @@ export function worldRound(e){
     if(!d){h.job='rest';m.unpaid++;continue;}
     const b=e.industries[d.id],currency=e.coinMode?b.currency:'ntd';
     if(!settle(e,'i:'+d.id,owner,28,currency,'工资 · '+d.name)){b.reason='无法支付工资 / 兑换池不足';m.unpaid++;continue;}
-    const wage=currency==='beta'?toCoins(e,28):28;b[currency==='beta'?'wages':'wagesNT']+=wage;b.staff++;m.workers++;m.wages+=currency==='beta'?wage*rate:wage;h.working=true;h.industry=d.id;b.reason='营业中';
+    const wage=currency==='beta'?toCoins(e,28):28;b[currency==='beta'?'wages':'wagesNT']+=wage;b.staff++;m.workers++;m.wages+=currency==='beta'?wage*rate:wage;h.working=true;if(h.industry!==d.id)event(e,'就业',h.name+' 入职 '+d.name,{resident:h.id,industry:d.id});h.industry=d.id;b.reason='营业中';
     if(e.crypto.enabled&&e.crypto.reserve>0&&h.id%8===0&&h.hunger<3){h.job='mine';h.working=false;b.reason='提供挖矿岗位';continue;}
     if(!e.supply){b.reason='生产开关关闭';continue;}
     if(outputKind(d.sector)){
@@ -116,7 +117,7 @@ export function worldRound(e){
   }
   // Civic funding is transferred from business taxes, never fabricated.
   for(const d of ds){const b=e.industries[d.id];const tax=Math.floor(b.roundSales*.08);if(tax&&transfer(e,'i:'+d.id,'bank',tax,'经营税'))m.tax+=tax;
-    if(b.cash>=300&&b.staff>=b.capacity&&b.level<5&&transfer(e,'i:'+d.id,'producer',100,'设备扩建')){b.level++;b.capacity++;}
+    if(b.cash>=300&&b.staff>=b.capacity&&b.level<5&&transfer(e,'i:'+d.id,'producer',100,'设备扩建')){b.level++;b.capacity++;event(e,'发展',d.name+' 扩建至 '+b.level+' 级');}
   }
   const publics=[...(bySector.public||[]),...(bySector.transport||[])];for(const d of publics){if(e.bank>=28&&e.industries[d.id].cash<56)transfer(e,'bank','i:'+d.id,28,'公共服务预算');}
   // Working animals need feed; vehicles need upkeep. Their service availability feeds next round.
@@ -124,16 +125,20 @@ export function worldRound(e){
   const repair=(bySector.tools||[]).find(d=>e.industries[d.id].open),farm=(bySector.farm||[]).find(d=>e.industries[d.id].open&&e.industries[d.id].stock>0);
   for(const a of assets){
     if(!a.available)continue;
-    if(a.kind==='animal'&&farm){const b=e.industries[farm.id];if(e.round%4===a.index%4&&b.stock>0){b.stock--;a.fed=e.round;}}
-    if(a.kind==='vehicle'&&(a.moving||a.assigned)&&repair&&e.round%4===a.index%4){const owner=a.owner==='player'?'player':'i:'+(bySector.transport?.[0]?.id||'market');a.maintained=worldService(e,repair.id,2,'载具维护',owner);}
+    if(a.kind==='animal'&&farm){const b=e.industries[farm.id];if(e.round%4===a.index%4&&b.stock>0){const budget='asset:'+a.id;if(!e.industries[budget]||worldService(e,farm.id,2,'动物饲料','i:'+budget)){b.stock--;a.fed=e.round;event(e,'资产',a.name+' 已喂食');}}}
+    if(a.kind==='vehicle'&&(a.moving||a.assigned)&&repair&&e.round%4===a.index%4){const owner=e.industries['asset:'+a.id]?'i:asset:'+a.id:a.owner==='player'?'player':'i:'+(bySector.transport?.[0]?.id||'market');a.maintained=worldService(e,repair.id,2,'载具维护',owner);event(e,'资产',a.name+(a.maintained?' 完成维护':' 维护费不足'));}
   }
   w.wellbeing=assets.filter(a=>a.kind==='animal'&&['cat','dog'].includes(a.type)&&a.available&&e.round-(a.fed??-10)<5).length;
   if(w.unpaidRewards>0&&e.bank>100){const pay=Math.min(w.unpaidRewards,e.bank-100);if(transfer(e,'bank','player',pay,'结清任务奖励'))w.unpaidRewards-=pay;}
+  for(const d of ds){const b=e.industries[d.id];if(b.reason!==b.loggedReason){event(e,'产业',d.name+'：'+b.reason);b.loggedReason=b.reason;}}
+  event(e,'轮次','GDP NT$'+m.gdp+' · 就业 '+m.workers+'/'+active.length+' · 产出 '+m.production+' · 未获工资 '+m.unpaid,{gdp:m.gdp,workers:m.workers,production:m.production});
+  for(const d of e.pendingDecisions||[])if(e.round>d.round)event(e,'决策反馈',d.message+' 后：就业 '+d.workers+' → '+m.workers+'，GDP '+d.gdp+' → '+m.gdp+'，产出 '+d.production+' → '+m.production+'。这是同期变化，可能受其他事件共同影响。',{decisionId:d.id});
+  e.pendingDecisions=(e.pendingDecisions||[]).filter(d=>e.round<=d.round);
   w.totals.production+=m.production;w.totals.sales+=m.sales;w.totals.wages+=m.wages;
   const reasons=[];if(m.unpaid)reasons.push(m.unpaid+' 人未获工资');if(!e.supply)reasons.push('生产已关闭');if(active.some(h=>h.hunger>2))reasons.push('食品供给或居民购买力不足');if(!workingTransport)reasons.push('物流仅有步行运力');w.bottlenecks=reasons;
 }
 export function snapshotEconomy(e){
   if(!e.world)return;const w=e.world,active=e.households.filter(h=>h.active!==false),m=e.metrics;
-  const point={round:e.round,production:m.production||0,sales:m.sales||0,wages:m.wages||0,workers:m.workers||0,population:active.length,unmet:active.filter(h=>h.hunger>0).length,rate:exchangeRate(e),cash:e.player,coins:e.crypto.holders.player,stock:Object.values(e.industries||{}).reduce((n,b)=>n+(b.stock||0),0)};
+  const point={round:e.round,gdp:m.gdp||0,production:m.production||0,sales:m.sales||0,wages:m.wages||0,workers:m.workers||0,population:active.length,unmet:active.filter(h=>h.hunger>0).length,rate:exchangeRate(e),cash:e.player,coins:e.crypto.holders.player,stock:Object.values(e.industries||{}).reduce((n,b)=>n+(b.stock||0),0)};
   const prev=w.history.at(-1);if(prev?.round===e.round)w.history[w.history.length-1]=point;else w.history.push(point);w.history=w.history.slice(-120);return point;
 }
