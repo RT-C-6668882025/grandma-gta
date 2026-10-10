@@ -20,6 +20,6 @@ jar cf android/build/classes.jar -C android/build/classes .
 if [ ! -f android/build/test-key.jks ]; then
   keytool -genkeypair -keystore android/build/test-key.jks -storepass android -keypass android -alias personal-test -dname 'CN=Grandma GTA Personal Test' -keyalg RSA -keysize 2048 -validity 10000 >/dev/null 2>&1
 fi
-"$task_tools/apksigner" sign --ks android/build/test-key.jks --ks-pass pass:android --key-pass pass:android --out android/build/grandma-gta-god.apk android/build/aligned.apk
-"$task_tools/apksigner" verify android/build/grandma-gta-god.apk
-printf 'Built android/build/grandma-gta-god.apk\n'
+"$task_tools/apksigner" sign --ks android/build/test-key.jks --ks-pass pass:android --key-pass pass:android --out android/build/grandma-gta-phone-tablet.apk android/build/aligned.apk
+"$task_tools/apksigner" verify android/build/grandma-gta-phone-tablet.apk
+printf 'Built android/build/grandma-gta-phone-tablet.apk\n'

@@ -36,7 +36,7 @@
 
 ## 下载与安装
 
-打开 [Releases](https://github.com/RT-C-6668882025/grandma-gta/releases/latest)，下载其中的 **grandma-gta-god.apk**。
+打开 [Releases](https://github.com/RT-C-6668882025/grandma-gta/releases/latest)，下载其中的 **grandma-gta-phone-tablet.apk（手机 / 平板通用版）**。同一个安装包同时适配手机和平板，无需分开下载。
 
 - Android 8.0 及以上；系统 Android WebView 需支持 WebGL、ES Modules 与 import maps。
 - 游戏资源包含在安装包内，游玩无需联网下载模型。
@@ -115,7 +115,7 @@ Android 构建需要 Java 17、Android SDK Platform 35 和 Build Tools 35.0.0：
 bash android/build.sh
 ```
 
-输出：`android/build/grandma-gta-god.apk`。GitHub Actions 也会为游戏与安卓代码变更构建 APK；更多说明见 [Android 构建说明](android/README.md)。
+输出：`android/build/grandma-gta-phone-tablet.apk`。GitHub Actions 也会为游戏与安卓代码变更构建 APK；更多说明见 [Android 构建说明](android/README.md)。
 
 | URL 参数 | 用途 |
 | --- | --- |
