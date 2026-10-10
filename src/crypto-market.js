@@ -48,7 +48,7 @@ export function marketRound(e){
   }
 }
 export function validCrypto(e){
-  const c=e.crypto,count=e.households.length,owners=['player','bank',...Array.from({length:count},(_,i)=>'h:'+i),...INDUSTRIES.map(d=>'i:'+d.id).filter(k=>Object.hasOwn(c?.holders||{},k))];
+  const c=e.crypto,count=e.households.length,owners=['player','bank',...Array.from({length:count},(_,i)=>'h:'+i),...Object.keys(e.industries||{}).map(id=>'i:'+id).filter(k=>Object.hasOwn(c?.holders||{},k))];
   if(!c||c.rules!==2||c.authority!=='player'||typeof c.enabled!=='boolean'||!Number.isSafeInteger(c.minted)||c.minted<0||c.supply!==INITIAL_COINS+c.minted||c.supply>1000000000||!Number.isSafeInteger(c.reserve)||c.reserve<0||!Number.isSafeInteger(c.price)||c.price<1||c.price>100000||!Number.isSafeInteger(c.serial)||c.serial<0||!Number.isSafeInteger(c.volume)||c.volume<0||!c.holders||Object.keys(c.holders).length!==owners.length||owners.some(k=>!Number.isSafeInteger(c.holders[k])||c.holders[k]<0)||!Array.isArray(c.orders)||c.orders.length>(count+2)*10)return false;
   const ids=new Set();for(const o of c.orders){if(!owners.includes(o.owner)||!['buy','sell'].includes(o.side)||!Number.isSafeInteger(o.id)||o.id<1||o.id>c.serial||ids.has(o.id)||!Number.isSafeInteger(o.price)||o.price<1||o.price>100000||!Number.isSafeInteger(o.quantity)||o.quantity<1||o.quantity>c.supply)return false;ids.add(o.id);}
   return totalCoins(c)===c.supply&&e.cryptoEscrow===c.orders.filter(o=>o.side==='buy').reduce((n,o)=>n+o.quantity*o.price,0)&&(c.enabled||c.orders.length===0);

@@ -14,7 +14,8 @@ export function setPower(key, value) {
 export const protectedPlayer = entity => !!entity && entity.role === 'player' && MOD.invincible;
 export const speedFactor = entity => entity?.role === 'player' && MOD.speed ? MOD.multiplier : 1;
 export function applyPowers(player, state) {
-  if (MOD.money) state.money = Math.max(MONEY_FLOOR, Number.isFinite(state.money) ? state.money : 0);
+  if(state.economy?.world?.enabled)state.money=state.economy.player;
+  else if (MOD.money) state.money = Math.max(MONEY_FLOOR, Number.isFinite(state.money) ? state.money : 0);
   if (!player) return;
   if (protectedPlayer(player)) { if (player.down) player.wake(); player.hp = player.maxHp; player.stamina = 100; }
   if (player.veh && protectedPlayer(player)) { player.veh.hp = player.veh.def.hp; player.veh.broken = false; }

@@ -1,9 +1,12 @@
+import {economyPlaces} from './world/town.js';
+import {createWorldBindings} from './world-bindings.js';
+import {openDevelopment} from './economy-dashboard.js';
 import {INDUSTRIES,ensureIndustries,investIndustry,exchange,exchangeRate,toCoins,fiatPrice,shopCurrency} from './town-currency.js';
 import {populate,chooseJobs,JOB_LABELS} from './residents.js';
 import {createResidentScene,MINE,residentTarget} from './resident-scene.js';
 import {roadRoute,distance,routeLength} from './map-navigation.js';
 import { placeOrder, cancelOrder, setCryptoEnabled, marketRound, totalCoins, mintCoins } from './crypto-market.js';
-import { accountLabel } from './economy-ledger.js';
+import { accountLabel, transfer } from './economy-ledger.js';
 import { GOODS, price as economyPrice, totalMoney, tickEconomy, economyRound, pickupCargo, deliverCargo, issueMoney, setCoinMode } from './economy.js';
 import { MOD, setPower, applyPowers } from './mods.js';
 import { CAMERA_LABELS } from './camera-modes.js';
@@ -12,7 +15,7 @@ import { CAMERA_LABELS } from './camera-modes.js';
 import * as THREE from 'three';
 import { buildTerrain, heightAt } from './world/terrain.js';
 import { buildTown, lamps, doors } from './world/town.js';
-import { dressTown, loadPropModels } from './world/props.js';
+import { dressTown, loadPropModels, economyEquipment } from './world/props.js';
 import { buildStreet, tickStreet, signals, lightState } from './world/street.js';
 import { Sky, DAY_SECONDS } from './world/sky.js';
 import { NIGHT } from './world/kit.js';
@@ -133,6 +136,8 @@ async function start(cont) {
   setPower('fly', false);
   applyPowers(player, G);
   await initStory(ctx);
+  worldBindings.init(G.economy,economyPlaces,economyEquipment);
+  worldBindings.sync(G.economy,ents,vehicles,animals,player);
   chooseJobs(G.economy);
   if(!G.navigation)clearNavigation();
   orbit.yaw = player.heading + Math.PI;
@@ -273,8 +278,8 @@ function tickPlayerDown(dt) {
   if (koT > 4) {
     const busted = G.wanted > 0;
     const fee = busted ? 150 * G.wanted : 200;
-    const paid = Math.min(G.money, fee);
-    G.money -= paid;
+    const paid = Math.min(G.economy.world?.enabled?G.economy.player:G.money, fee);
+    if(G.economy.world?.enabled){transfer(G.economy,'player',busted?'bank':'i:clinic',paid,busted?'罚款':'医疗费用');G.money=G.economy.player;}else G.money -= paid;
     const at = busted ? { x: P.police.x, z: 9 } : { x: P.clinic.x, z: 9 };
     if (player.veh) player.unride();
     player.pos.set(at.x, 0, at.z);
@@ -329,8 +334,10 @@ function step(d) {
     return;
   }
   applyPowers(player, G);
+  worldSyncTimer+=d;if(worldSyncTimer>=1){worldSyncTimer=0;worldBindings.sync(G.economy,ents,vehicles,animals,player);}
   residentScene.sync(G.economy,ents);
-  if (!ui.open && !inputLocked() && !dance.on && !player.down) tickEconomy(G.economy,d);
+  if ((!ui.open||ui.developmentLive) && !document.hidden && !inputLocked() && !dance.on && !player.down) tickEconomy(G.economy,d);
+  dashboardTimer+=d;if(dashboardTimer>=.25){dashboardTimer=0;ui.developmentRefresh?.();updateEconomyHUD();}
   navigationTimer+=d;
   if(G.navigation&&navigationTimer>2){navigationTimer=0;if(distance(player.pos,G.navigation)<6){ui.toast('已到達：'+G.navigation.label);clearNavigation();}else navigateTo(G.navigation);}
   // ---------- global keys
@@ -558,6 +565,7 @@ function openCrypto(){
     });
 }
 function openIndustries(){
+  if(G.economy.world?.enabled){openWorldDashboard();return;}
   unlock();const e=G.economy;ensureIndustries(e);
   ui.panel('我的貨幣 · 現有產業',`<div class="note">${e.coinMode?'BETA 已用於工資、三種商品、批發、送貨及居民服務消費。':'BETA 結算已暫停，資產保留。'} 你的可用持幣 ${e.crypto.holders.player} · 礦池 ${e.crypto.reserve} · 總供應 ${e.crypto.supply}。初始你有 2,000 枚，產業從零持幣開始。</div>
     <div class="row"><div>統一匯率</div><b>1 BETA = NT$${exchangeRate(e)}</b></div><div class="note">沿用市場最近成交價，無新成交時保持原價（初始 10）。整枚 BETA 支付向上取整；NT$ 保持原價。你的錢包 NT$${e.player} / ${e.crypto.holders.player} BETA · 公庫兌換池 NT$${e.bank} / ${e.crypto.holders.bank} BETA。初始池內沒有幣，可先賣幣給公庫。</div>
@@ -589,6 +597,10 @@ function openResidents(){
   });
 }
 function openEconomy() {
+  if(G.economy.world?.enabled){openWorldDashboard();return;}
+  openLegacyEconomy();
+}
+function openLegacyEconomy(){
   unlock(); const e=G.economy;
   const near=p=>Math.hypot(player.pos.x-p.x,player.pos.z-p.z)<12;
   ui.panel(e.coinMode?'小鎮經濟 · BETA':'小鎮經濟 · NT$', `<div class="note">第 ${e.round} 輪 · 遊玩中每 15 秒推進一輪，暫停 / 選單不推進。${e.households.length} 名居民 · 最多 24 名入場，其餘後台模擬。</div>
@@ -671,3 +683,10 @@ window.__ama = {
   audio, camera, scene,
 };
 boot().then(() => requestAnimationFrame(frame)).catch((e) => { loadmsg.textContent = '載入失敗：' + e.message; console.error(e); });
+
+const worldBindings=createWorldBindings();let worldSyncTimer=0,dashboardTimer=0;
+function openWorldDashboard(){unlock();openDevelopment({ui,e:G.economy,step:()=>economyRound(G.economy),save:doSave,navigate:navigateTo,enableCoins:()=>setCoinMode(G.economy,true),legacy:openLegacyEconomy,issue:()=>issueMoney(G.economy)});}
+function updateEconomyHUD(){
+  let el=document.getElementById('economyLiveHUD');if(!el){el=document.createElement('button');el.id='economyLiveHUD';el.onclick=openWorldDashboard;el.style.cssText='position:fixed;left:50%;top:8px;transform:translateX(-50%);z-index:12;background:#14202dcc;color:#e4fff1;border:1px solid #527463;border-radius:8px;padding:6px 10px;font:12px sans-serif;max-width:60vw;';document.body.append(el);}
+  const e=G.economy;el.hidden=mode!=='play'||!!ui.open;el.textContent=`经济 ${e.round}轮 · 产出 ${e.metrics.production||0} · 销售 NT$${e.metrics.sales||0} · 汇率 ${exchangeRate(e)} · 点击查看`;
+}

@@ -262,3 +262,15 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #111; color:
 #navigationHint { position:fixed; left:50%; top:122px; transform:translateX(-50%); padding:6px 12px; border-radius:8px; background:#17251edd; color:#f2c230; font-size:12px; pointer-events:none; z-index:7; max-width:65vw; text-align:center; }
 #navigationHint[hidden] { display:none; }
 @media (max-height:450px) { #navigationHint { top:58px; max-width:40vw; } }
+
+.development-panel { max-width: 1050px !important; width: min(96vw,1050px) !important; }
+.development-panel input,.development-panel select { max-width: 160px; padding: 8px; font: inherit; color: #f1f5f9; background:#18232d; border:1px solid #52616f; border-radius:6px; }
+.development-panel details { margin:12px 0; padding:10px; border:1px solid #394754; border-radius:8px; }
+.development-panel summary { cursor:pointer; font-weight:bold; }
+.development-panel .row { flex-wrap:wrap; gap:10px; }
+.development-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(135px,1fr)); gap:8px; margin:12px 0; }
+.development-stats>div { background:#18232d; padding:10px; border-radius:8px; }
+.development-stats small,.development-stats strong { display:block; }
+.development-stats small { color:#a9bac8; margin-bottom:6px; }
+#developmentLedger { white-space:pre-line; }
+#developmentChart svg { width:100%; max-height:160px; }

@@ -8,10 +8,11 @@ export const INDUSTRIES=[
   {id:'recycle',name:'回收場',kind:'service',x:140,z:36},
   {id:'betel',name:'檳榔攤',kind:'service',x:214,z:44},
 ];
+export const industriesOf=e=>e.world?.enabled?e.world.places:INDUSTRIES;
 export function ensureIndustries(e){
   e.industries ||= {};
-  for(const d of INDUSTRIES){e.industries[d.id] ||= {owner:'player',open:true,revenue:0,wages:0};const b=e.industries[d.id];b.cash ??= 0;b.currency=b.currency==='ntd'?'ntd':'beta';b.revenueNT ??= 0;b.wagesNT ??= 0;e.crypto.holders['i:'+d.id] ??= 0;}
-  for(const h of e.households)h.industry=INDUSTRIES[h.id%INDUSTRIES.length].id;
+  for(const d of industriesOf(e)){e.industries[d.id] ||= {owner:'player',open:true,revenue:0,wages:0};const b=e.industries[d.id];b.cash ??= 0;b.currency=b.currency==='ntd'?'ntd':'beta';b.revenueNT ??= 0;b.wagesNT ??= 0;e.crypto.holders['i:'+d.id] ??= 0;}
+  if(!e.world?.enabled)for(const h of e.households)h.industry=INDUSTRIES[h.id%INDUSTRIES.length].id;
   e.coinLedger ||= [];e.coinSequence ||= 0;
 }
 export function coinTransfer(e,from,to,amount,reason){
@@ -22,7 +23,12 @@ export function coinTransfer(e,from,to,amount,reason){
   e.coinSequence=(e.coinSequence||0)+1;e.coinLedger ||= [];
   e.coinLedger.unshift({id:e.coinSequence,round:e.round,from:identity(from),to:identity(to),amount,reason});e.coinLedger.length=Math.min(120,e.coinLedger.length);return true;
 }
-export const exchangeRate=e=>e.crypto.price;
+export const exchangeRate=e=>e.ratePolicy?.mode==='fixed'?e.ratePolicy.value:e.crypto.price;
+export function setExchangeRate(e,mode,value){
+  if(!['fixed','market'].includes(mode)||mode==='fixed'&&(!Number.isSafeInteger(value)||value<1||value>100000))return false;
+  const previous=exchangeRate(e);e.ratePolicy={mode,value:mode==='fixed'?value:e.crypto.price};
+  e.rateHistory ||= [];e.rateHistory.unshift({round:e.round,mode,previous,value:exchangeRate(e)});e.rateHistory.length=Math.min(60,e.rateHistory.length);return true;
+}
 export const toCoins=(e,nt)=>Math.max(1,Math.ceil(nt/exchangeRate(e)));
 export const fiatPrice=(e,id)=>Math.round(({bread:30,soda:25,bolida:60})[id]*Math.max(.7,Math.min(2.5,24/(e.stock[id]+8)))*(1+e.issued/15000));
 export const coinPrice=(e,id)=>toCoins(e,fiatPrice(e,id));

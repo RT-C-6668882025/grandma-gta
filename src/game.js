@@ -1,3 +1,4 @@
+import {transfer} from './economy-ledger.js';
 import { createEconomy, restoreEconomy, price as marketPrice } from './economy.js';
 import { MOD, MONEY_FLOOR } from './mods.js';
 // Game state: money (NT$), backpack, what 阿嬤 wears, wanted level (八卦值),
@@ -43,11 +44,13 @@ export function save(extra = {}) {
 export const hasSave = () => { try { return !!localStorage.getItem(KEY); } catch (e) { return false; } };
 
 export function addMoney(n, why = '') {
+  if(G.economy.world?.enabled){const amount=Math.max(0,Math.min(Math.round(n),G.economy.bank));if(amount)transfer(G.economy,'bank','player',amount,why||'任务收益');if(amount<n){G.economy.world.unpaidRewards=(G.economy.world.unpaidRewards||0)+n-amount;emit('toast','公库余额不足，尚欠奖励 NT$'+(n-amount),true);}G.money=G.economy.player;G.stats.earned+=amount;emit('money',amount,why);return amount;}
   G.money += n;
   if (n > 0) G.stats.earned += n;
   emit('money', n, why);
 }
 export function spend(n) {
+  if(G.economy.world?.enabled){const ok=transfer(G.economy,'player','bank',n,'玩家服务 / 任务支出');G.money=G.economy.player;if(ok)emit('money',-n);return ok;}
   if (MOD.money) { G.money = Math.max(G.money, MONEY_FLOOR); return true; }
   if (G.money < n) return false;
   G.money -= n;

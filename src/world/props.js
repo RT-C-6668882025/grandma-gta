@@ -8,7 +8,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { heightAt } from './terrain.js';
 import { addBox, addCircle, setTag } from '../collide.js';
 import { P, ROWS } from './layout.js';
-import { doors, seats, court, hideout, tripoTrees } from './town.js';
+import { doors, seats, court, hideout, tripoTrees, economyPlaces } from './town.js';
 import { rng } from '../util.js';
 
 const loader = new GLTFLoader();
@@ -27,10 +27,13 @@ export async function loadPropModels(names, dir = 'props') {
     } catch (e) { console.warn('prop missing', n); }
   }));
 }
+export const economyEquipment=[];
 export const hasModel = (n) => !!models[n];
 export const modelSize = (n) => models[n]?.size;
 // items: [x, z, ry, h, y?]; o.collide: 'box' | 'circle'
 export function placeInstanced(scene, name, items, o = {}) {
+  if (['vegstall','foodcart','betelstand'].includes(name)) for(const [i,a] of items.entries()) economyPlaces.push({id:name+':'+a[0]+':'+a[1],name:({vegstall:'菜攤',foodcart:'小吃車',betelstand:'檳榔攤'})[name],kind:'retail',x:a[0],z:a[1]});
+  if(['shelf','fridge','gascan','speaker','karaoke','fitness','hoop','judges','drumstool','calldesk','radio'].includes(name))for(const [i,a] of items.entries())economyEquipment.push({id:'equipment:'+name+':'+a[0]+':'+a[1]+':'+i,kind:'equipment',type:name,name:({shelf:'货架',fridge:'冰箱',gascan:'燃料罐',speaker:'音响',karaoke:'卡拉OK设备',fitness:'健身器材',hoop:'篮球架',judges:'评委席',drumstool:'石凳',calldesk:'办公桌',radio:'收音机'})[name],x:a[0],z:a[1],available:true,price:80,owner:'market'});
   const M = models[name];
   if (!M || !items.length) return null;
   const grp = new THREE.Group(); grp.name = 'props:' + name;

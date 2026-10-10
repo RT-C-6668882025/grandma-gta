@@ -1,3 +1,4 @@
+import {itemQuote} from './world-economy.js';
 import {canPay,shopCurrency,fiatPrice,coinPrice} from './town-currency.js';
 import {mountMap} from './map-panel.js';
 import { GOODS } from './economy.js';
@@ -144,6 +145,7 @@ export const ui = {
 
   // ---------------------------------------------------------------- panels
   panel(title, html, bind, cls = '') {
+    this.developmentLive=false;this.developmentRefresh=null;
     const p = this.el.panel;
     p.innerHTML = `<div class="phead"><div class="ptitle">${title}</div><div class="pmoney">NT$ ${G.money.toLocaleString()}</div><div class="pclose" data-x>✕</div></div><div class="pbody">${html}</div>`;
     p.className = cls;
@@ -152,6 +154,7 @@ export const ui = {
     bind && bind(p.querySelector('.pbody'), p);
   },
   close() {
+    this.developmentLive=false;this.developmentRefresh=null;
     this.mapDispose?.();this.mapDispose=null;
     this.el.panel.classList.add('hidden'); this.el.phone.classList.add('hidden'); this.el.dlg.classList.add('hidden'); this.el.bigmap.classList.add('hidden');
     if (this._dlgResolve) { const r = this._dlgResolve; this._dlgResolve = null; r(-1); }
@@ -197,13 +200,14 @@ export const ui = {
       if (tab === 'buy') for (const id of stock) {
         const it = ITEMS[id];
         const owned = it.slot && G.owned[id];
-        const p = priceOf(id), available = !GOODS[id] || G.economy.stock[id]>0 && (G.economy.coinMode?G.economy.industries?.shop?.open!==false&&canPay(G.economy,'player',shopCurrency(G.economy),p):G.economy.player>=p);
-        cards += `<div class="card"><div class="ci">${it.icon}</div><div style="flex:1"><div class="cn">${it.name}${id === 'cig' ? '（一包 10 支）' : ''}</div><div class="cd">${it.desc}</div>${it.swag ? `<div class="cs">痞度 +${it.swag}</div>` : ''}${it.dmg && it.slot ? `<div class="cs" style="color:#f2c230">攻擊 ${it.dmg}</div>` : ''}<div class="cb"><span class="price">${GOODS[id]&&shopCurrency(G.economy)==='beta'?'BETA ':'NT$'}${p}${GOODS[id] ? ` · 庫存 ${G.economy.stock[id]}${G.economy.coinMode?' · NT$'+fiatPrice(G.economy,id)+' / '+coinPrice(G.economy,id)+' BETA':''}` : ''}</span>${owned ? '<button disabled>已擁有</button>' : `<button data-buy="${id}" ${!GOODS[id] && G.money < p || !available ? 'disabled' : ''}>買</button>`}</div></div>${it.stack && count(id) ? `<div class="cq">×${count(id)}</div>` : ''}</div>`;
+        const world=G.economy.world?.enabled,quote=world?itemQuote(G.economy,where,id,it.price):null;
+        const p = world?quote.amount:priceOf(id), available = world?quote.stock>0&&G.economy.industries[where==='mart'?'shop':where]?.open!==false&&canPay(G.economy,'player',quote.currency,p): !GOODS[id] || G.economy.stock[id]>0 && (G.economy.coinMode?G.economy.industries?.shop?.open!==false&&canPay(G.economy,'player',shopCurrency(G.economy),p):G.economy.player>=p);
+        cards += `<div class="card"><div class="ci">${it.icon}</div><div style="flex:1"><div class="cn">${it.name}${id === 'cig' ? '（一包 10 支）' : ''}</div><div class="cd">${it.desc}</div>${it.swag ? `<div class="cs">痞度 +${it.swag}</div>` : ''}${it.dmg && it.slot ? `<div class="cs" style="color:#f2c230">攻擊 ${it.dmg}</div>` : ''}<div class="cb"><span class="price">${(world?quote.currency==='beta':GOODS[id]&&shopCurrency(G.economy)==='beta')?'BETA ':'NT$'}${p}${world ? ` · 库存 ${quote.stock}` : GOODS[id] ? ` · 庫存 ${G.economy.stock[id]}${G.economy.coinMode?' · NT$'+fiatPrice(G.economy,id)+' / '+coinPrice(G.economy,id)+' BETA':''}` : ''}</span>${owned ? '<button disabled>已擁有</button>' : `<button data-buy="${id}" ${!world&&!GOODS[id] && G.money < p || !available ? 'disabled' : ''}>買</button>`}</div></div>${it.stack && count(id) ? `<div class="cq">×${count(id)}</div>` : ''}</div>`;
       } else for (const id of buys) {
-        const it = ITEMS[id], n = count(id), p = sellPrice(id, where);
-        cards += `<div class="card"><div class="ci">${it.icon}</div><div style="flex:1"><div class="cn">${it.name}</div><div class="cd">${it.desc}</div><div class="cb"><span class="price">NT$${p}</span><button data-sell="${id}" ${n ? '' : 'disabled'}>賣一個</button><button data-sellall="${id}" ${n ? '' : 'disabled'}>全賣</button></div></div><div class="cq">×${n}</div></div>`;
+        const it = ITEMS[id], n = count(id), quote=G.economy.world?.enabled?itemQuote(G.economy,where,id,sellPrice(id,where)):null,p=quote?.amount??sellPrice(id,where);
+        cards += `<div class="card"><div class="ci">${it.icon}</div><div style="flex:1"><div class="cn">${it.name}</div><div class="cd">${it.desc}</div><div class="cb"><span class="price">${quote?.currency==='beta'?'BETA ':'NT$'}${p}</span><button data-sell="${id}" ${n ? '' : 'disabled'}>賣一個</button><button data-sellall="${id}" ${n ? '' : 'disabled'}>全賣</button></div></div><div class="cq">×${n}</div></div>`;
       }
-      return `${buys.length ? `<div class="tabs"><button data-tab="buy" class="${tab === 'buy' ? 'on' : ''}">買東西</button><button data-tab="sell" class="${tab === 'sell' ? 'on' : ''}">賣東西</button></div>` : ''}<div class="grid">${cards}</div><div class="note">小鎮錢包 NT$${G.economy.player} / ${G.economy.crypto.holders.player} BETA（三種商品按商店選定幣種付款；雙幣自動兌換受公庫儲備限制） · 痞度 ${swag()}：打 ${Math.round(Math.min(0.25, swag() * 0.004) * 100)} 折扣。</div>`;
+      return `${buys.length ? `<div class="tabs"><button data-tab="buy" class="${tab === 'buy' ? 'on' : ''}">買東西</button><button data-tab="sell" class="${tab === 'sell' ? 'on' : ''}">賣東西</button></div>` : ''}<div class="grid">${cards}</div><div class="note">小鎮錢包 NT$${G.economy.player} / ${G.economy.crypto.holders.player} BETA（全商品接入产业库存与钱包；双币兑换受公库储备限制） · 痞度 ${swag()}：打 ${Math.round(Math.min(0.25, swag() * 0.004) * 100)} 折扣。</div>`;
     };
     const bind = (b) => {
       b.querySelectorAll('[data-tab]').forEach((x) => (x.onclick = () => { tab = this._shopTab = x.dataset.tab; this.shop(title, stock, buys, act, where); }));

@@ -30,20 +30,20 @@ jobs:
           name: grandma-gta-phone-tablet-apk
           path: android/build/grandma-gta-phone-tablet.apk
           retention-days: 30
-      - name: Publish exchange edition
+      - name: Publish world economy edition
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v1.8.0-exchange >/dev/null 2>&1; then exit 0; fi
+          if gh release view v1.9.0-world >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
           手机 / 平板通用版 · Android 8.0+。
-          统一汇率：初始 1 BETA = NT$10，随后读取市场最近成交价；居民交易与产业模式一起运行。
-          入口：能力 → 小镇经济 → 启用我的币 → 我的货币 · 现有产业。可 NT$ 买币、BETA 换 NT$，并查看汇率、两个钱包与公库兑换池。
-          公库初始 NT$2,000、0 BETA，可先卖币补充池内币库存。资金不足时拒绝兑换，不凭空创造货币。
-          六处产业可分别选择 NT$ / BETA 注资和结算；工资、三种商品、批发、服务与送货共用汇率，付款不足时尝试自动兑换，受公库储备限制。
-          整枚 BETA 向上取整；工资基准 NT$28、送货运费 NT$40。其他商品与任务仍沿用原钱包。
-          玩家初始 2,000 BETA、矿池 100，发币权、居民固定 ID、地图点击导航保留。旧版资产不重置。
-          95 项自动测试通过；完整真机体验待验证。个人测试签名可能与旧版不同，卸载会清除存档。游戏内模拟，不接真实区块链。
+          入口：能力 → 小镇经济，或点击顶部实时经济条。
+          全镇经济：初始场景登记 509 个场地、64 名 NPC、223 个载具/动物/设施资产；按行业模拟工资、生产、消费、库存、税收和扩建。场地数包含住宅、农田及合作社账户，不等于不同 3D 模型文件数。
+          可选择市场汇率或手动固定汇率（1～100000）；工资、商品和兑换统一使用结算汇率，市场成交价独立展示。配置随存档保存。
+          面板打开期间经济继续运行，支持 1～16 倍速度、手动推进、历史趋势、缺工/缺钱原因、产业投资停业、资产购买与车辆物流调度。
+          玩家商店交易接入库存与双币账户；任务奖励由公库支付，不足部分记录为待结奖励。旧版钱包保留。
+          103 项自动测试通过；浏览器验证实际场景、汇率修改及存档恢复。行业行为为简化模拟，完整 Android 真机体验待验证。
+          个人测试签名可能与旧版不同，卸载会清除存档。游戏内模拟，不接真实区块链。
           NOTES
-          gh release create v1.8.0-exchange android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 手机 / 平板通用版 1.8 · 汇率 / 双币结算' --notes-file notes.md
+          gh release create v1.9.0-world android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 手机 / 平板通用版 1.9 · 全镇经济 / 实时发展' --notes-file notes.md

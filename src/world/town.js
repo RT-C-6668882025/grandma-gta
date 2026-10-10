@@ -19,6 +19,7 @@ export const seats = [];      // stools where NPCs sit
 export const cardboard = [];  // recyclable pickups {x,z}
 export const sideUnits = [];
 export const rowUnits = [];
+export const economyPlaces = [];
 
 const R = rng(2024);
 const pick = (a) => a[Math.floor(R() * a.length)];
@@ -143,6 +144,7 @@ function shophouse(k, cx, cz, ry, w, o = {}) {
   // horizontal sign board above the arcade
   const sh = SHOPS[shopI++ % SHOPS.length];
   const name = o.name || sh[0];
+  economyPlaces.push({id:o.special || 'building:'+economyPlaces.length,name,x:cx,z:cz,kind:o.sub?.includes('住戶')||['永和社區','番薯寮新村','幸福大廈'].includes(name)?'housing':'business',special:o.special});
   // each shop name always gets the same board (so identical boards share one atlas cell)
   const hn = [...name].reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0;
   const uv = drawSign(name, { bg: o.signBg || sh[1], fg: o.signFg || sh[2], border: hn % 2 ? 'rgba(255,255,255,0.6)' : null, sub: o.sub || (hn % 5 < 2 ? ['電話：(05)2-XXXXX', '營業中', '老店 · 四十年', '批發零售', '歡迎光臨'][hn % 5] : null) });
@@ -756,6 +758,7 @@ function broadleaf(k, x, z) {
   for (let i = 0; i < 5; i++) k.sphere(x + (R() - 0.5) * 2.4, y + h + R() * 1.6, z + (R() - 0.5) * 2.4, 1.3 + R() * 0.8, R() < 0.5 ? C.leaf : C.leafD, { seg: 7, sy: 0.8 });
 }
 function farmhouse(k, x, z, ry) {
+  economyPlaces.push({id:'farmhouse:'+economyPlaces.length,name:'農舍',x,z,kind:'housing'});
   const y = heightAt(x, z);
   const c = Math.cos(ry), s = Math.sin(ry);
   const w = 8 + R() * 4, d = 6 + R() * 2, h = 3.2;
@@ -841,6 +844,9 @@ export function buildTown(scene) {
   buildCourt(scene);
   buildHideout(scene);
   buildNature(scene);
+  for(const [id,name,kind] of [['home','阿嬤三合院','housing'],['station','車站','transport'],['school','國小','public'],['temple','媽祖廟','public'],['shrine','土地公廟','public'],['court','活動中心','public'],['recycle','回收場','recycling'],['betel','檳榔攤','retail'],['cloth','衣服攤','retail'],['hideout','舊倉庫','storage']]) economyPlaces.push({id,name,kind,...P[id]});
+  for(const [i,a] of PADDIES.entries())economyPlaces.push({id:'field:'+i,name:'農田 '+(i+1),kind:'farm',x:(a.x0+a.x1)/2,z:(a.z0+a.z1)/2});
+  economyPlaces.push({id:'garden',name:'高麗菜園',kind:'farm',x:(GARDEN.x0+GARDEN.x1)/2,z:(GARDEN.z0+GARDEN.z1)/2});
   // sidewalk walk points on both kerbs and around the square / market
   for (let x = -220; x <= 220; x += 12) { spawnSpots.push([x, -8.5]); spawnSpots.push([x, 8.5]); }
   for (let z = -16; z > -110; z -= 10) spawnSpots.push([P.market.x, z]);

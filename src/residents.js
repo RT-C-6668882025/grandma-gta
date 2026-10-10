@@ -1,6 +1,6 @@
 import {transfer} from './economy-ledger.js';
 import {cancelOrder} from './crypto-market.js';
-export const POPULATIONS=[12,24,48,96];
+export const POPULATIONS=[12,24,48,64,96,128,256];
 const surnames=['陳','林','黃','張','李','王','吳','劉'];
 const names=['志明','美玲','文雄','淑芬','建宏','雅惠','國華','秀英','俊傑','麗華','明德','玉蘭'];
 export function resident(id,cash=0,serial=id){return {id,uid:'R'+String(serial+1).padStart(6,'0'),name:surnames[serial%8]+names[Math.floor(serial/8)%12],age:22+serial*7%49,cash,hunger:0,job:'work',working:true,miningProgress:0,mined:0,present:true};}

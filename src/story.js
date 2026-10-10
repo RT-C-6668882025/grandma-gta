@@ -1,3 +1,4 @@
+import {tradeItem,recordHarvest,worldService} from './world-economy.js';
 import { GOODS, buyGood } from './economy.js';
 import { DANCE_MUSIC } from './audio.js';
 // Town life and missions. Missions are async scripts: they await lines of
@@ -231,6 +232,7 @@ function openShop(title, where) {
   ui.shop(title, stock, buys, {
     buy: (id) => {
       const it = ITEMS[id], p = priceOf(id);
+      if(G.economy.world?.enabled){if(!tradeItem(G.economy,where,id,1,'buy',it.price)){ui.toast('产业停业、缺货或小镇钱包不足',true);return;}give(id,id==='cig'?10:1);ctx.audio.play('cash');if(it.slot)equip(it.slot,id);return;}
       if (GOODS[id] && !buyGood(G.economy,id,p)) { ui.toast('小鎮錢包不足或商品缺貨，按 N 查看經濟 / 接送貨工作', true); return; }
       if (!GOODS[id] && !spend(p)) { ui.toast('錢不夠啦！', true); return; }
       give(id, id === 'cig' ? 10 : 1);
@@ -242,6 +244,7 @@ function openShop(title, where) {
     sell: (id, n) => {
       if (!n) return;
       const p = sellPrice(id, where) * n;
+      if(G.economy.world?.enabled){if(!tradeItem(G.economy,where,id,n,'sell',sellPrice(id,where))){ui.toast('收购方资金不足或停业',true);return;}give(id,-n);if(id==='cardboard')G.stats.recycled+=n;emit('sold',id,n);return;}
       give(id, -n); addMoney(p, '賣' + ITEMS[id].name);
       ctx.audio.play('cash');
       if (id === 'cardboard') G.stats.recycled += n;
@@ -252,7 +255,7 @@ function openShop(title, where) {
 }
 function respray() {
   const v = ctx.player.veh;
-  if (!spend(150)) { ui.toast('洗車要 NT$150 啦。', true); return; }
+  if (!(G.economy.world?.enabled?worldService(G.economy,'gas',150,'车辆维修'):spend(150))) { ui.toast('洗車要 NT$150 啦。', true); return; }
   v.hp = v.def.hp; v.broken = false;
   const col = new THREE.Color().setHSL(Math.random(), 0.55, 0.62);
   v.body.traverse((m) => { if (m.isMesh && m.material?.color) { m.material = m.material.clone(); m.material.color.copy(col); } });
@@ -263,13 +266,13 @@ function respray() {
 function harvest() {
   G.flags.harvestDay = G.day;
   const n = 4 + Math.floor(Math.random() * 3);
-  give('cabbage', n);
+  give('cabbage', n);recordHarvest(G.economy,n);
   ctx.player.actor.play('lift', { dur: 2.2 });
   ctx.audio.play('pickup');
   ui.toast(`採了 🥬 高麗菜 ×${n}。拿去菜市場或柑仔店賣。`, 'money');
 }
 function pray() {
-  if (!spend(20)) { ui.toast('連香油錢都沒有……', true); return; }
+  if (!(G.economy.world?.enabled?worldService(G.economy,'temple',20,'香油钱'):spend(20))) { ui.toast('連香油錢都沒有……', true); return; }
   ctx.player.actor.play('phone', { dur: 2.0 });
   bark('pray');
   emit('fx', 'wisp', new THREE.Vector3(doors.incense.x, 1.8, doors.incense.z - 1.6));

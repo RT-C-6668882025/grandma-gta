@@ -1,3 +1,4 @@
+import {economyPlaces} from './town.js';
 // Street furniture that makes 番薯寮 read as a busy suburban town rather than
 // open countryside: traffic lights that actually cycle (and that traffic
 // obeys), election flags on every lamp post, rooftop billboards, red/green
@@ -149,6 +150,7 @@ function streetTree(k, x, z) {
 function gasStation(k) {
   const x = 216, z = -24;
   doors.gas = { x: x - 5, z };
+  economyPlaces.push({id:'gas',name:'加油维修站',kind:'tools',x,z});
   k.box(x, 0, z, 20, 0.08, 16, 0xa7a39c);
   for (const [cx, cz] of [[-5, -4], [5, -4], [-5, 4], [5, 4]]) k.box(x + cx, 0, z + cz, 0.5, 5.2, 0.5, 0xe8e8e8, 0, { collide: true });
   k.box(x, 5.2, z, 14, 0.7, 11, 0xf0f0f0);

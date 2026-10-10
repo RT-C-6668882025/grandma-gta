@@ -8,11 +8,12 @@ export function createResidentScene({ground=()=>0}={}){
   const bindings=new Map();let lastEconomy=null;
   return {
     sync(e,ents){
+      if(e.world?.enabled)return;
       if(lastEconomy!==e){for(const n of bindings.values()){delete n.residentUid;delete n.economyId;delete n.economyReady;delete n.economyJob;n.name=n.originalResidentName||'路人';}bindings.clear();lastEconomy=e;}
       for(const [id,n] of bindings)if(id>=e.households.length||n.residentUid!==e.households[id].uid||!ents.includes(n)){delete n.residentUid;delete n.economyId;delete n.economyReady;delete n.economyJob;n.name=n.originalResidentName||'路人';bindings.delete(id);}
       for(const h of e.households){
         let n=bindings.get(h.id);
-        if(!n&&h.id<24){n=ents.find(n=>n.role==='ped'&&n.economyId===undefined&&!n.talk&&!n.hostile&&!n.veh&&!n.down);if(n){n.originalResidentName=n.name;n.economyId=h.id;n.residentUid=h.uid;bindings.set(h.id,n);}}
+        if(!n&&h.id<(e.world?.enabled?256:24)){n=ents.find(n=>n.role==='ped'&&n.economyId===undefined&&!n.talk&&!n.hostile&&!n.veh&&!n.down);if(n){n.originalResidentName=n.name;n.economyId=h.id;n.residentUid=h.uid;bindings.set(h.id,n);}}
         h.placed=!!n;if(!n){h.present=true;h.location=residentTarget(h);continue;}
         n.name=h.name;const target=residentTarget(h),offset={x:target.x+(h.id%3-1)*1.5,z:target.z+(Math.floor(h.id/3)%3-1)*1.5};
         // Existing ambient pedestrians become persistent residents; story characters are untouched.
