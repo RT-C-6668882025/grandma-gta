@@ -4,7 +4,7 @@ export function initTouch(canvas, state) {
   const root = document.createElement('div');
   root.id = 'touchControls';
   root.hidden = true;
-  const actions = [['KeyJ','攻擊'],['KeyE','互動'],['KeyF','上下車'],['ShiftLeft','奔跑'],['Space','剎車 / 罵人'],['KeyG','投擲'],['KeyR','電台'],['KeyQ','痞步'],['KeyH','補藥'],['KeyX','抽菸'],['KeyB','檳榔']];
+  const actions = [['KeyJ','攻擊'],['KeyE','互動'],['KeyF','上下車'],['ShiftLeft','奔跑'],['Space','剎車 / 罵人'],['KeyG','投擲'],['KeyR','電台'],['KeyQ','痞步'],['KeyH','補藥'],['KeyX','抽菸'],['KeyB','檳榔'],['KeyV','飛行'],['PageUp','上升'],['PageDown','下降']];
   root.innerHTML = `<div class="touch-tools">${[['Escape','暫停 / 返回'],['Tab','背包'],['KeyT','手機'],['KeyM','地圖']].map(([k,l]) => `<button data-key="${k}">${l}</button>`).join('')}<button id="touchToggle">觸控：開</button></div><div class="touch-play"><div id="touchStick" aria-label="移動搖桿"><i></i></div><div class="touch-actions">${actions.map(([k,l]) => `<button data-key="${k}">${l}</button>`).join('')}</div></div><div class="touch-dance">${[['ArrowLeft','←'],['ArrowUp','↑'],['ArrowDown','↓'],['ArrowRight','→']].map(([k,l]) => `<button data-key="${k}">${l}</button>`).join('')}</div><div class="rotate-hint">橫屏遊玩，左側移動 · 滑動畫面轉視角</div>`;
   document.body.append(root);
   let enabled = navigator.maxTouchPoints > 0, controls = true, look = null, stick = null;

@@ -1,3 +1,4 @@
+import { MOD, protectedPlayer, speedFactor, flightPosition } from './mods.js';
 import { loadModel } from './model-loader.js';
 // People and animals: the player (阿嬤), townsfolk with simple GTA-ish brains
 // (wander / flee / fight back / call it in), thugs, the old cop, family,
@@ -77,6 +78,10 @@ export class Ent {
     return d;
   }
   integrate(dt) {
+    if (this.role === 'player' && MOD.fly && !this.veh) {
+      const p = flightPosition(this.pos, this.vel, this.flightAxis || 0, dt, heightAt, BOUND);
+      this.pos.set(p.x,p.y,p.z); this.wading = false; return;
+    }
     this.pos.x += this.vel.x * dt; this.pos.z += this.vel.z * dt;
     const [x, z] = resolve(this.pos.x, this.pos.z, this.r, this.pos.y);
     this.pos.x = clamp(x, -BOUND, BOUND); this.pos.z = clamp(z, -BOUND, BOUND);
@@ -86,7 +91,7 @@ export class Ent {
   }
   // damage from someone (att may be null)
   takeHit(att, dmg, o = {}) {
-    if (this.down || this.invuln) return false;
+    if (this.down || this.invuln || protectedPlayer(this)) return false;
     emit('damage', this, att, o.kind || 'assault');
     this.hp -= dmg;
     this.actor.hurt();
@@ -101,6 +106,7 @@ export class Ent {
     return true;
   }
   knockOut(t = 8) {
+    if (protectedPlayer(this)) return;
     this.down = true; this.downT = t; this.hp = 0;
     this.actor.knockDown();
     this.stars.visible = true;
@@ -229,13 +235,13 @@ export class Player extends Ent {
     const a = this.actor;
     this.tickCommon(dt);
     if (this.veh) { this.updateActor(dt); return; }
-    if (this.diving) { this.updateDive(dt); return; }
+    if (this.diving && !MOD.fly) { this.updateDive(dt); return; }
     const busy = a.busy;
     const down = this.down;
     const mv = ctl.move;
     const mag = Math.min(1, Math.hypot(mv.x, mv.z));
     const sprint = ctl.sprint && this.stamina > 5 && mag > 0.1;
-    let speed = mag * (sprint ? 4.6 : this.walkMode ? 1.3 : 2.5);
+    let speed = mag * (sprint ? 4.6 : this.walkMode ? 1.3 : 2.5) * speedFactor(this);
     if (this.wading) speed *= 0.55;
     if (busy && a.cur && ['jab', 'cross', 'kick', 'swing', 'throw'].includes(a.cur.name)) speed *= 0.25;
     if (a.cur && ['phone', 'lift', 'dance', 'angry', 'complain'].includes(a.cur.name)) speed = 0;
@@ -244,6 +250,7 @@ export class Player extends Ent {
     const tvx = mag > 0.1 ? Math.sin(this.heading) * speed : 0, tvz = mag > 0.1 ? Math.cos(this.heading) * speed : 0;
     this.vel.x = damp(this.vel.x, tvx, 10, dt); this.vel.z = damp(this.vel.z, tvz, 10, dt);
     this.stamina = clamp(this.stamina + (sprint ? -14 : 9 * (G.flags.smoking ? 1.6 : 1)) * dt, 0, 100);
+    this.flightAxis = ctl.flyAxis || 0;
     this.integrate(dt);
     a.swag = this.walkMode || (swag() >= 20 && !sprint);
     // combat

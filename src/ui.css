@@ -192,3 +192,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #111; color:
 #fullscreenHelp { max-width: min(520px, 90vw); max-height: 85dvh; overflow: auto; color: var(--ink); background: #17191c; border: 1px solid var(--line); border-radius: 12px; padding: 22px; line-height: 1.6; }
 #fullscreenHelp::backdrop { background: rgba(0,0,0,.7); }
 #fullscreenHelp a, #fullscreenHelp button { display: inline-block; min-height: 44px; padding: 10px 16px; margin: 6px; border-radius: 8px; border: 1px solid var(--line); color: var(--ink); background: #30343b; text-decoration: none; }
+
+#powerSpeed { min-height: 44px; padding: 8px; margin-left: auto; background: #30343b; color: var(--ink); border-radius: 8px; border: 1px solid var(--line); }
+[data-power] { min-height: 44px; margin-left: auto; }
+.touch-actions { max-width: 285px; }

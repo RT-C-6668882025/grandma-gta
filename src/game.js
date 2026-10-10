@@ -1,3 +1,4 @@
+import { MOD, MONEY_FLOOR } from './mods.js';
 // Game state: money (NT$), backpack, what 阿嬤 wears, wanted level (八卦值),
 // story progress. Saved to localStorage. Tiny event bus for the UI and story.
 
@@ -45,6 +46,7 @@ export function addMoney(n, why = '') {
   emit('money', n, why);
 }
 export function spend(n) {
+  if (MOD.money) { G.money = Math.max(G.money, MONEY_FLOOR); return true; }
   if (G.money < n) return false;
   G.money -= n;
   emit('money', -n);

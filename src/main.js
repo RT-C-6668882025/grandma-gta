@@ -1,3 +1,4 @@
+import { MOD, setPower, applyPowers } from './mods.js';
 // 阿嬤俠盜：田庄大亂鬥 — bootstrap and main loop.
 
 import * as THREE from 'three';
@@ -120,6 +121,8 @@ async function start(cont) {
   if (player) { if (player.veh) exitVehicle(); player.remove(); }  // starting again must not leave a stale player in the world
   player = new Player(s.x, s.z, G.heading ?? Math.PI);
   ctx.player = player;
+  setPower('fly', false);
+  applyPowers(player, G);
   await initStory(ctx);
   orbit.yaw = player.heading + Math.PI;
   document.getElementById('title').classList.add('hidden');
@@ -308,7 +311,10 @@ function step(d) {
     endFrame();
     return;
   }
+  applyPowers(player, G);
   // ---------- global keys
+  if (hit('KeyO')) { if (ui.open) ui.close(); else openPowers(); }
+  if (!ui.open && hit('KeyV')) { if (player.veh) exitVehicle(); setPower('fly', !MOD.fly); player.diving = null; ui.toast(MOD.fly ? '飛行開啟：PageUp 上升，PageDown 下降' : '飛行關閉'); }
   if (hit('Escape')) { if (ui.open) ui.close(); else { unlock(); ui.panel('暫停', pauseHtml(), bindPause); } }
   if (ui.open === 'dialog' || ui.open === 'phone') for (let n = 1; n <= 9; n++) if (hit('Digit' + n)) ui.dialogKey(n);
   if (dance.on) for (const k of ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown', 'KeyA', 'KeyW', 'KeyD', 'KeyS']) if (hit(k)) danceKey(k);
@@ -359,6 +365,7 @@ function step(d) {
     }
   }
   const ctl = {
+    flyAxis: playing && MOD.fly ? (down('PageUp') ? 1 : 0) - (down('PageDown') ? 1 : 0) : 0,
     move: { x: f.x * fw + r.x * rt, z: f.z * fw + r.z * rt },
     sprint: playing && down('ShiftLeft', 'ShiftRight'),
     attack: playing && !player.veh && (mouse.clickL || hit('KeyJ')),
@@ -371,7 +378,7 @@ function step(d) {
   if (playing && hit('KeyX')) player.lightUp();
   if (playing && hit('KeyH')) { const id = ['bolida', 'bread', 'soda'].find((k) => count(k) > 0); if (id) useItem(id); else ui.toast('沒有吃的喝的。柑仔店有寶力大補。', true); }
   if (playing && hit('KeyB')) useItem('betel');
-  if (playing && hit('Space') && !player.veh && !player.actor.busy) { player.actor.play(['angry', 'complain', 'laugh', 'fold'][Math.floor(Math.random() * 4)], { dur: 2.2 }); bark(['hit2', 'm3_ama1', 'lottery_lose'][Math.floor(Math.random() * 3)]); for (const e of ents) if (e.role === 'ped' && e.distTo(player) < 8) { e.state = 'flee'; e.fleeT = 3; } }
+  if (playing && !MOD.fly && hit('Space') && !player.veh && !player.actor.busy) { player.actor.play(['angry', 'complain', 'laugh', 'fold'][Math.floor(Math.random() * 4)], { dur: 2.2 }); bark(['hit2', 'm3_ama1', 'lottery_lose'][Math.floor(Math.random() * 3)]); for (const e of ents) if (e.role === 'ped' && e.distTo(player) < 8) { e.state = 'flee'; e.fleeT = 3; } }
   // ---------- simulate
   player.update(d, ctl);
   for (const e of ents) {
@@ -394,7 +401,7 @@ function step(d) {
     veh.root.visible = Math.hypot(veh.pos.x - player.pos.x, veh.pos.z - player.pos.z) < 260;
   }
   for (const a of animals) a.update(d, player);
-  separate(player);
+  if (!MOD.fly) separate(player);
   tickProjectiles(d);
   tickPickups(d, player, onPickup);
   tickStory(d);
@@ -415,6 +422,7 @@ function step(d) {
   if (its[0] && hit('KeyE')) { unlock(); its[0].act(); }
   // regen
   if (!player.down && performance.now() - (player.lastHurt || 0) > 7000) player.hp = Math.min(player.maxHp, player.hp + d * (ITEMS[G.eq.chain]?.regen ? 3 : 1.2));
+  applyPowers(player, G);
   G.hp = player.hp;
   // ---------- world, camera, hud
   sky.update(d, player.pos, true, WX);
@@ -463,6 +471,19 @@ function tickWorld(d, focus) {
   for (const v of vehicles) if (v.lights) v.lights.visible = dark;
 }
 
+function openPowers() {
+  unlock();
+  const labels = { invincible: '無敵 / 無限體力（包含當前車輛）', money: '無限錢', speed: '超速', fly: '飛行（步行模式）' };
+  ui.panel('超能力 · GOD MODE', `<div class="note">O 能力選單 · V 切換飛行 · PageUp 上升 / PageDown 下降。觸屏也有上升、下降按鈕。飛行關閉後回到地面。</div>${Object.entries(labels).map(([key,label]) => `<div class="row"><div class="nm">${label}</div><button data-power="${key}">${MOD[key] ? '已開啟' : '已關閉'}</button></div>`).join('')}<div class="row"><div class="nm">速度倍率</div><select id="powerSpeed" aria-label="速度倍率">${[2,4,8].map(n=>`<option value="${n}" ${MOD.multiplier === n ? 'selected' : ''}>${n} 倍</option>`).join('')}</select></div>`, el => {
+    el.querySelectorAll('[data-power]').forEach(button => { button.onclick = () => {
+      const key = button.dataset.power;
+      if (key === 'fly' && !MOD.fly && player.veh) exitVehicle();
+      setPower(key, !MOD[key]); player.diving = null; applyPowers(player,G); openPowers();
+    }; });
+    el.querySelector('#powerSpeed').onchange = event => { setPower('multiplier', event.target.value); };
+  });
+}
+document.getElementById('powersButton').onclick = () => { if (mode === 'play') { if (ui.open) ui.close(); else openPowers(); } };
 function pauseHtml() {
   return `<div class="note" style="font-size:14px;line-height:1.9">
     <b>走路</b>：WASD 移動 · Shift 跑 · Q 痞步 · 左鍵/J 打人 · G 丟藍白拖 · X 抽菸 · H 喝補藥 · B 嚼檳榔 · 空白鍵 罵人 · E 互動<br>

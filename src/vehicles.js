@@ -1,3 +1,4 @@
+import { protectedPlayer, speedFactor } from './mods.js';
 import { loadModel } from './model-loader.js';
 // Vehicles: Tripo models of an 80s–90s Taiwanese street — 阿嬤's tricycle,
 // bicycle, scooters, a sedan, the little blue pickup (發財車) and the yellow
@@ -140,7 +141,8 @@ export class Vehicle {
   }
   // ctl: {throttle -1..1, steer -1..1, brake bool}
   drive(dt, ctl) {
-    const d = this.def;
+    const boost = speedFactor(this.driver);
+    const d = boost === 1 ? this.def : { ...this.def, max: this.def.max * boost, acc: this.def.acc * boost };
     if (this.broken) { ctl = { throttle: 0, steer: ctl.steer, brake: true }; }
     const fwdSpeed = this.speed;
     let acc = 0;
@@ -180,6 +182,7 @@ export class Vehicle {
     return 0;
   }
   damage(n) {
+    if (protectedPlayer(this.driver)) return;
     this.hp -= n;
     if (this.hp <= 0 && !this.broken) { this.broken = true; this.hp = 0; }
   }
