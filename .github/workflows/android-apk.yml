@@ -21,6 +21,8 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - name: Install Android build tools
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Verify simulation and input tests
+        run: node --test tests/*.test.mjs
       - name: Build offline personal test APK
         run: bash android/build.sh
       - uses: actions/upload-artifact@v4
@@ -28,19 +30,19 @@ jobs:
           name: grandma-gta-phone-tablet-apk
           path: android/build/grandma-gta-phone-tablet.apk
           retention-days: 30
-      - name: Publish beta market edition
+      - name: Publish residents and map edition
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v1.5.0-beta >/dev/null 2>&1; then exit 0; fi
+          if gh release view v1.6.0-residents >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
           手机 / 平板通用版 · Android 8.0+。
-          完善小镇经济账本：工资、消费、批发、分红、运费、增发与交易托管均记录资金去向。
-          新增可开关的游戏内 Beta 加密市场：初始发行 2,100 枚；玩家与居民挂限价单，价格 / 时间优先撮合、部分成交、撤单退款。
-          成交改变居民现金与持币，影响消费和工作选择；关闭 Beta 退回所有挂单资产，持币和历史保留。
-          入口：能力 → 小镇经济 → 进入 Beta，或 N 打开小镇经济。初始分配：玩家 100、居民 1,850、公库 150。
-          仅本地游戏内模拟，未连接真实区块链、钱包或资金；居民仍为经济账户，尚未绑定场景动作。
-          自动测试、构建与签名校验通过；真机验证待完成。测试签名可能与旧版不同，卸载重装会清除存档。
+          默认持有 2,000 BETA；初始矿池 100 枚，居民从零持币开始付电费挖矿。发行者控制台可给自己增发，或补充居民矿池。
+          默认 24 名居民，可调整为 12 / 24 / 48 / 96 人；姓名、年龄、钱包、职业、挖矿进度与持币独立保存，最多 24 名接入现有场景路人，其余后台模拟。
+          地图支持搜索、分类、居民定位、拖动、双指缩放、道路导航和小地图路线；新增菜市场旁算力站与送货目标。
+          入口：能力 → 小镇经济 → 居民管理 / Beta。地图按 M，手机点顶部「地图」。
+          旧版 Beta 会先退款撤单，再改为玩家 2,000 / 矿池 100 的新分配；普通货币保持。新规则只迁移一次。
+          游戏内本地模拟，未接真实区块链。自动测试、构建与签名校验通过；真机体验待验证。测试签名可能与旧版不同，卸载重装会清除存档。
           NOTES
-          gh release create v1.5.0-beta android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 手机 / 平板通用版 1.5 · BETA 加密市场' --notes-file notes.md
+          gh release create v1.6.0-residents android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 手机 / 平板通用版 1.6 · 居民 / 挖矿 / 地图' --notes-file notes.md

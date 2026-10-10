@@ -1,3 +1,4 @@
+import {mountMap} from './map-panel.js';
 import { GOODS } from './economy.js';
 // HUD and panels: GTA-style radar (rotates with the camera), money, wanted
 // megaphones, weapon box, subtitles, objective line, mission banners, radio
@@ -66,6 +67,7 @@ export const ui = {
       return [W / 2 + dx * ca - dz * sa, H * 0.62 + dx * sa + dz * ca];
     };
     c.font = 'bold 15px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    if(this.navigation?.path?.length){c.strokeStyle='#f2c230';c.lineWidth=2;c.beginPath();this.navigation.path.forEach((p,i)=>{const [x,y]=toScreen(p.x,p.z);i?c.lineTo(x,y):c.moveTo(x,y);});c.stroke();}
     for (const b of blips) {
       let [x, y] = toScreen(b.x, b.z);
       const out = x < 8 || x > W - 8 || y < 8 || y > H - 8;
@@ -149,6 +151,7 @@ export const ui = {
     bind && bind(p.querySelector('.pbody'), p);
   },
   close() {
+    this.mapDispose?.();this.mapDispose=null;
     this.el.panel.classList.add('hidden'); this.el.phone.classList.add('hidden'); this.el.dlg.classList.add('hidden'); this.el.bigmap.classList.add('hidden');
     if (this._dlgResolve) { const r = this._dlgResolve; this._dlgResolve = null; r(-1); }
     this.open = null; this.blocking = false;
@@ -245,27 +248,8 @@ export const ui = {
     r(n - 1);
   },
   bigmap(player) {
-    const b = this.el.bigmap;
-    b.innerHTML = '<canvas></canvas>';
-    b.classList.remove('hidden');
-    const cv = b.querySelector('canvas');
-    cv.width = b.clientWidth * devicePixelRatio; cv.height = b.clientHeight * devicePixelRatio;
-    const c = cv.getContext('2d');
-    const s = Math.min(cv.width, cv.height) / 520;
-    const cx = cv.width / 2, cy = cv.height / 2;
-    c.fillStyle = '#1a201a'; c.fillRect(0, 0, cv.width, cv.height);
-    c.save(); c.translate(cx, cy); c.scale(s / 3, s / 3);
-    c.drawImage(this.base, -(0 + HALF) * 3 - 0, -(40 + HALF) * 3 + 0);
-    c.restore();
-    const to = (x, z) => [cx + x * s, cy + (z - 40) * s];
-    c.font = `${14 * devicePixelRatio}px "PingFang TC",sans-serif`; c.textAlign = 'center';
-    const labels = [['柑仔店', P.shop], ['五金行', P.hardware], ['派出所', P.police], ['診所', P.clinic], ['菜市場', P.market], ['夜市衣攤', P.cloth], ['媽祖廟', P.temple], ['車站', P.station], ['回收場', P.recycle], ['檳榔攤', P.betel], ['大榕樹', P.banyan], ['土地公', P.shrine], ['國小', P.school], ['阿嬤家', P.home]];
-    for (const [n, p] of labels) { const [x, y] = to(p.x, p.z); c.fillStyle = 'rgba(0,0,0,0.6)'; c.fillRect(x - 32 * devicePixelRatio, y - 16 * devicePixelRatio, 64 * devicePixelRatio, 20 * devicePixelRatio); c.fillStyle = '#fff'; c.fillText(n, x, y); }
-    for (const bl of blips) { const [x, y] = to(bl.x, bl.z); c.fillStyle = bl.color || '#fff'; c.beginPath(); c.arc(x, y, 7 * devicePixelRatio, 0, 7); c.fill(); if (bl.label) { c.fillStyle = bl.color || '#fff'; c.fillText(bl.label, x, y - 12 * devicePixelRatio); } }
-    const [px, py] = to(player.pos.x, player.pos.z);
-    c.fillStyle = '#fff'; c.beginPath(); c.arc(px, py, 8 * devicePixelRatio, 0, 7); c.fill(); c.fillStyle = '#e0402e'; c.beginPath(); c.arc(px, py, 5 * devicePixelRatio, 0, 7); c.fill();
-    c.fillStyle = '#f2c230'; c.font = `bold ${22 * devicePixelRatio}px "PingFang TC",sans-serif`; c.textAlign = 'left'; c.fillText('番薯寮 · 地圖', 20 * devicePixelRatio, 36 * devicePixelRatio);
-    this.open = 'map'; this.blocking = true;
+    this.mapDispose?.();const b=this.el.bigmap;b.classList.remove('hidden');this.open='map';this.blocking=true;
+    this.mapDispose=mountMap(b,{base:this.base,world:WORLD,player,...this.mapData(),onClose:()=>this.close()});
   },
 };
 

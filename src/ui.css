@@ -245,3 +245,20 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #111; color:
 .market-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:12px 0; }
 #coinQuantity, #coinPrice { width:100px; max-width:100%; min-height:44px; padding:6px; border:1px solid var(--line); border-radius:6px; color:var(--ink); background:#30343b; }
 @media (max-width:600px) { .market-grid { gap:6px; } }
+
+#bigmap { display:flex; flex-direction:column; overflow:hidden; inset:3dvh 3vw; z-index:15; }
+.map-toolbar,.map-footer { display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:8px; background:#161e1c; }
+.map-toolbar button,.map-footer button { min-height:44px; padding:6px 10px; }
+.map-toolbar input { flex:1; min-width:100px; width:160px; }
+.map-toolbar input,.map-toolbar select,#population,#mintQuantity,#mintDestination { min-height:44px; max-width:100%; padding:6px; background:#30343b; color:var(--ink); border:1px solid var(--line); border-radius:6px; }
+#mintQuantity { width:100px; }
+.map-stage { position:relative; flex:1; min-height:80px; }
+#bigmap .map-stage canvas { position:absolute; inset:0; width:100%; height:100%; touch-action:none; }
+#mapResults { position:absolute; left:8px; top:8px; display:flex; flex-direction:column; max-height:70%; overflow:auto; }
+#mapResults button { min-height:40px; padding:6px 12px; background:#17251eee; }
+#mapSelection { flex:1; font-size:12px; min-width:120px; }
+@media (max-height:450px) { .map-toolbar b { display:none; } .map-toolbar,.map-footer { padding:4px; gap:4px; } }
+
+#navigationHint { position:fixed; left:50%; top:122px; transform:translateX(-50%); padding:6px 12px; border-radius:8px; background:#17251edd; color:#f2c230; font-size:12px; pointer-events:none; z-index:7; max-width:65vw; text-align:center; }
+#navigationHint[hidden] { display:none; }
+@media (max-height:450px) { #navigationHint { top:58px; max-width:40vw; } }
