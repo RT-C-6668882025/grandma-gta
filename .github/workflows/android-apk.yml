@@ -30,19 +30,20 @@ jobs:
           name: grandma-gta-phone-tablet-apk
           path: android/build/grandma-gta-phone-tablet.apk
           retention-days: 30
-      - name: Publish town currency edition
+      - name: Publish exchange edition
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v1.7.0-town-currency >/dev/null 2>&1; then exit 0; fi
+          if gh release view v1.8.0-exchange >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
           手机 / 平板通用版 · Android 8.0+。
-          现有居民拥有永久 ID，迁出后不会复用。复用现有 3D 路人，最多 24 人入场，其余后台模拟。
-          新入口：能力 → 小镇经济 → 启用我的币。初始玩家 2,000 BETA、矿池 100；玩家独占发币权。给产业注资后，币实际用于工资、三种商品、批发与送货。
-          菜市场与柑仔店关联生产库存；五金行、诊所、回收场、槟榔摊接工资与定期服务付款，具体服务效果仍沿用原玩法。其他商品与任务仍使用原钱包。
-          地图点地点、搜索结果或空白位置即可建立道路参考导航；拖动只平移。
-          军政、选举、警局财政及自动出生尚未实现。87 项自动测试通过；完整真机体验待验证。
-          手机 / 平板通用。个人测试签名可能与旧版不同；卸载重装会清除本地存档。游戏内模拟，不接真实区块链。
+          统一汇率：初始 1 BETA = NT$10，随后读取市场最近成交价；居民交易与产业模式一起运行。
+          入口：能力 → 小镇经济 → 启用我的币 → 我的货币 · 现有产业。可 NT$ 买币、BETA 换 NT$，并查看汇率、两个钱包与公库兑换池。
+          公库初始 NT$2,000、0 BETA，可先卖币补充池内币库存。资金不足时拒绝兑换，不凭空创造货币。
+          六处产业可分别选择 NT$ / BETA 注资和结算；工资、三种商品、批发、服务与送货共用汇率，付款不足时尝试自动兑换，受公库储备限制。
+          整枚 BETA 向上取整；工资基准 NT$28、送货运费 NT$40。其他商品与任务仍沿用原钱包。
+          玩家初始 2,000 BETA、矿池 100，发币权、居民固定 ID、地图点击导航保留。旧版资产不重置。
+          95 项自动测试通过；完整真机体验待验证。个人测试签名可能与旧版不同，卸载会清除存档。游戏内模拟，不接真实区块链。
           NOTES
-          gh release create v1.7.0-town-currency android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 手机 / 平板通用版 1.7 · 我的币 / 产业' --notes-file notes.md
+          gh release create v1.8.0-exchange android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 手机 / 平板通用版 1.8 · 汇率 / 双币结算' --notes-file notes.md

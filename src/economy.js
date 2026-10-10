@@ -1,5 +1,5 @@
 import {resident,chooseJobs,POPULATIONS,restoreIdentities} from './residents.js';
-import {ensureIndustries,coinEconomyRound,coinPrice,buyWithCoins,coinTransfer} from './town-currency.js';
+import {ensureIndustries,coinEconomyRound,coinPrice,buyWithCoins,fiatPrice,shopCurrency,deliverWithCurrency} from './town-currency.js';
 import {transfer,record} from './economy-ledger.js';
 import {createCrypto,marketRound,validCrypto,migrateCrypto,mineRound,cancelOrder} from './crypto-market.js';
 export function setCoinMode(e,on){
@@ -8,16 +8,16 @@ export function setCoinMode(e,on){
 }
 export const GOODS={bread:{name:'菠蘿麵包',base:30},soda:{name:'彈珠汽水',base:25},bolida:{name:'寶力大補',base:60}};
 export function createEconomy(){return {version:1,round:0,elapsed:0,issued:0,bank:2000,producer:6000,shop:3000,player:1000,cryptoEscrow:0,crypto:createCrypto(),ledger:[],flows:{},sequence:0,metrics:{wages:0,sales:0,production:0,workers:24},households:Array.from({length:24},(_,id)=>resident(id,125)),stock:{bread:24,soda:24,bolida:12},warehouse:{bread:60,soda:60,bolida:30},supply:1,cargo:0,logs:[]};}
-export function totalMoney(e){return e.bank+e.producer+e.shop+e.player+(e.cryptoEscrow||0)+e.households.reduce((n,h)=>n+h.cash,0);}
+export function totalMoney(e){return e.bank+e.producer+e.shop+e.player+(e.cryptoEscrow||0)+e.households.reduce((n,h)=>n+h.cash,0)+Object.values(e.industries||{}).reduce((n,b)=>n+(b.cash||0),0);}
 const log=(e,message)=>{e.logs.unshift({round:e.round,message});e.logs.length=Math.min(16,e.logs.length);};
-export function price(e,id){const g=GOODS[id];if(!g)return null;if(e.coinMode)return coinPrice(e,id);return Math.round(g.base*Math.max(.7,Math.min(2.5,24/(e.stock[id]+8)))*(1+e.issued/15000));}
+export function price(e,id){const g=GOODS[id];if(!g)return null;if(e.coinMode&&shopCurrency(e)==='beta')return coinPrice(e,id);return fiatPrice(e,id);}
 export function buyGood(e,id,amount){if(e.coinMode)return !!GOODS[id]&&buyWithCoins(e,'player',id);if(!GOODS[id]||e.stock[id]<1||!transfer(e,'player','shop',amount,'購買'+GOODS[id].name))return false;e.stock[id]--;log(e,`阿嬤購買${GOODS[id].name} · NT$${amount}`);return true;}
 export function pickupCargo(e){if(e.cargo||e.warehouse.bread<10)return false;e.warehouse.bread-=10;e.cargo=10;log(e,'阿嬤領取 10 份麵包，等待送到柑仔店');return true;}
-export function deliverCargo(e){if(e.coinMode){ensureIndustries(e);if(!e.cargo||!e.industries.shop.open||e.crypto.holders['i:shop']<e.cargo+3)return false;coinTransfer(e,'i:shop','i:market',e.cargo,'送貨採購');coinTransfer(e,'i:shop','player',3,'送貨運費');e.stock.bread+=e.cargo;e.cargo=0;return true;}const cost=e.cargo*15,fee=40;if(!e.cargo||e.shop<cost+fee)return false;transfer(e,'shop','producer',cost,'送貨採購');transfer(e,'shop','player',fee,'送貨運費');e.stock.bread+=e.cargo;e.cargo=0;log(e,'阿嬤送貨完成 · 運費 NT$40');return true;}
+export function deliverCargo(e){if(e.coinMode)return deliverWithCurrency(e);const cost=e.cargo*15,fee=40;if(!e.cargo||e.shop<cost+fee)return false;transfer(e,'shop','producer',cost,'送貨採購');transfer(e,'shop','player',fee,'送貨運費');e.stock.bread+=e.cargo;e.cargo=0;log(e,'阿嬤送貨完成 · 運費 NT$40');return true;}
 export function issueMoney(e){if(e.issued>1000000000)return false;e.issued+=1000;e.bank+=1000;record(e,null,'bank',1000,'普通貨幣增發');for(let i=0;i<e.households.length;i++)transfer(e,'bank','h:'+i,Math.floor(960/e.households.length),'居民補助');log(e,'增發 NT$1,000 · 居民平分 NT$960，餘款入公庫');return true;}
 export function economyRound(e){
   e.round++;chooseJobs(e);e.metrics={wages:0,sales:0,production:0,workers:0};
-  if(e.coinMode){coinEconomyRound(e);mineRound(e);log(e,`BETA 第 ${e.round} 輪 · 工作 ${e.metrics.workers} 人 · 工資 ${e.metrics.wages} 枚 · 銷售 ${e.metrics.sales} 枚`);return;}
+  if(e.coinMode){coinEconomyRound(e);mineRound(e);marketRound(e);log(e,`雙幣第 ${e.round} 輪 · 工作 ${e.metrics.workers} 人 · 工資約 NT$${e.metrics.wages} · 銷售約 NT$${e.metrics.sales} · 匯率 ${e.crypto.price}`);return;}
   for(let i=0;i<e.households.length;i++){
     const h=e.households[i],owner='h:'+i;
     if(h.working&&h.present!==false&&transfer(e,'producer',owner,28,'工資')){e.metrics.wages+=28;e.metrics.workers++;for(const id of Object.keys(GOODS)){const quantity=Math.min(240-e.warehouse[id],Math.round((id==='bolida'?1:2)*e.supply));e.warehouse[id]+=quantity;e.metrics.production+=quantity;}}
@@ -36,6 +36,7 @@ export function restoreEconomy(value){
   if(['issued','bank','producer','shop','player','round','cargo'].some(k=>!Number.isSafeInteger(value[k])||value[k]<0)||!Number.isFinite(value.elapsed)||value.elapsed<0||value.elapsed>=15||!Array.isArray(value.households)||!POPULATIONS.includes(value.households.length)||value.households.some(h=>!Number.isSafeInteger(h.cash)||h.cash<0||!Number.isSafeInteger(h.hunger)||h.hunger<0||h.hunger>10)||![0,1].includes(value.supply)||![0,10].includes(value.cargo))return fresh;
   for(const key of ['stock','warehouse'])if(Object.keys(GOODS).some(id=>!Number.isSafeInteger(value[key]?.[id])||value[key][id]<0))return fresh;
   const e={...fresh,...value,crypto:value.crypto,households:value.households.map((h,id)=>({...resident(id),...h,id,present:true,placed:false}))};
+  if(value.industries&&(typeof value.industries!=='object'||Array.isArray(value.industries)||Object.values(value.industries).some(b=>!b||typeof b!=='object'||b.cash!==undefined&&(!Number.isSafeInteger(b.cash)||b.cash<0))))return fresh;
   if(!Number.isSafeInteger(totalMoney(e))||totalMoney(e)!==15000+e.issued||!Number.isSafeInteger(e.cryptoEscrow)||e.cryptoEscrow<0||!migrateCrypto(e)||!validCrypto(e))return fresh;
   // Display histories never influence balances; sanitize them independently of the simulation state.
   e.crypto.issuance=(Array.isArray(e.crypto.issuance)?e.crypto.issuance:[]).filter(t=>Number.isSafeInteger(t.quantity)&&t.quantity>0&&['player','reserve'].includes(t.destination)).slice(0,40);

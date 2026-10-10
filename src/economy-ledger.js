@@ -1,5 +1,5 @@
-export const cashOf=(e,owner)=>owner==='cryptoEscrow'?(e.cryptoEscrow||0):owner.startsWith('h:')?e.households[+owner.slice(2)]?.cash:e[owner];
-function setCash(e,owner,value){if(owner.startsWith('h:'))e.households[+owner.slice(2)].cash=value;else e[owner]=value;}
+export const cashOf=(e,owner)=>owner==='cryptoEscrow'?(e.cryptoEscrow||0):owner.startsWith('i:')?e.industries?.[owner.slice(2)]?.cash:owner.startsWith('h:')?e.households[+owner.slice(2)]?.cash:e[owner];
+function setCash(e,owner,value){if(owner.startsWith('i:'))e.industries[owner.slice(2)].cash=value;else if(owner.startsWith('h:'))e.households[+owner.slice(2)].cash=value;else e[owner]=value;}
 export function record(e,from,to,amount,reason){
   e.ledger ||= [];e.flows ||= {};e.sequence=(e.sequence||0)+1;
   e.ledger.unshift({id:e.sequence,round:e.round,from,to,amount,reason});e.ledger.length=Math.min(120,e.ledger.length);
@@ -10,4 +10,4 @@ export function transfer(e,from,to,amount,reason){
   const a=cashOf(e,from),b=cashOf(e,to);if(!Number.isSafeInteger(a)||!Number.isSafeInteger(b)||a<amount||!Number.isSafeInteger(b+amount))return false;
   setCash(e,from,a-amount);setCash(e,to,b+amount);record(e,from,to,amount,reason);return true;
 }
-export const accountLabel=owner=>({player:'阿嬤',bank:'公庫',producer:'生產商',shop:'商店',cryptoEscrow:'交易託管'})[owner]||(/^h:\d+$/.test(owner)?`居民 ${+owner.slice(2)+1}`:'發行');
+export const accountLabel=owner=>({player:'阿嬤',bank:'公庫 / 兌換池',producer:'生產商',shop:'商店',cryptoEscrow:'交易託管','i:market':'菜市場產業','i:shop':'柑仔店產業','i:hardware':'五金行產業','i:clinic':'診所產業','i:recycle':'回收場產業','i:betel':'檳榔攤產業'})[owner]||(/^h:\d+$/.test(owner)?`居民 ${+owner.slice(2)+1}`:'發行');
