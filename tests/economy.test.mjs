@@ -1,8 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
-const code=await readFile(new URL('../src/economy.js',import.meta.url));
-const E=await import('data:text/javascript;base64,'+code.toString('base64'));
+import {E} from './economy-modules.mjs';
 test('wages, consumption and wholesale conserve currency over long runs',()=>{const e=E.createEconomy();for(let n=0;n<500;n++)E.economyRound(e);assert.equal(E.totalMoney(e),15000);for(const key of ['shop','producer','player','bank'])assert.ok(e[key]>=0);assert.ok(e.households.every(h=>h.cash>=0));assert.ok(Object.values(e.stock).every(n=>n>=0));});
 test('player purchases charge the finite wallet and really remove stock',()=>{const e=E.createEconomy(),p=E.price(e,'bread');assert.equal(E.buyGood(e,'bread',p),true);assert.equal(e.player,1000-p);assert.equal(e.stock.bread,23);assert.equal(E.totalMoney(e),15000);e.player=0;const stock=e.stock.bread;assert.equal(E.buyGood(e,'bread',p),false);assert.equal(e.stock.bread,stock);assert.equal(E.buyGood(e,'unknown',1),false);assert.equal(E.buyGood(e,'bread',-1),false);});
 test('delivery cannot duplicate cargo and transfers merchant funds to player and producer',()=>{const e=E.createEconomy();assert.equal(E.deliverCargo(e),false);assert.equal(E.pickupCargo(e),true);assert.equal(E.pickupCargo(e),false);assert.equal(e.warehouse.bread,50);assert.equal(E.deliverCargo(e),true);assert.equal(e.player,1040);assert.equal(e.stock.bread,34);assert.equal(E.totalMoney(e),15000);assert.equal(E.deliverCargo(e),false);e.shop=0;E.pickupCargo(e);assert.equal(E.deliverCargo(e),false);assert.equal(e.cargo,10);});

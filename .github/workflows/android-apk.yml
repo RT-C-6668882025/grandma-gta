@@ -28,17 +28,19 @@ jobs:
           name: grandma-gta-phone-tablet-apk
           path: android/build/grandma-gta-phone-tablet.apk
           retention-days: 30
-      - name: Publish town economy edition
+      - name: Publish beta market edition
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v1.4.0-economy >/dev/null 2>&1; then exit 0; fi
+          if gh release view v1.5.0-beta >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
           手机 / 平板通用版 · Android 8.0+。
-          小镇货币系统第一版：12 户居民经济账户、有限钱包、工资 / 消费 / 补货、库存价格、送货运费与增发实验。
-          按 N 或能力菜单 → 小镇经济打开；手机也可通过「更多」进入。菜市场领货，柑仔店交货。
-          三种商品接入真实库存与小镇钱包，原无敌钱包和任务收入独立；NPC 经济行为尚未绑定场景动作。
+          完善小镇经济账本：工资、消费、批发、分红、运费、增发与交易托管均记录资金去向。
+          新增可开关的游戏内 Beta 加密市场：初始发行 2,100 枚；玩家与居民挂限价单，价格 / 时间优先撮合、部分成交、撤单退款。
+          成交改变居民现金与持币，影响消费和工作选择；关闭 Beta 退回所有挂单资产，持币和历史保留。
+          入口：能力 → 小镇经济 → 进入 Beta，或 N 打开小镇经济。初始分配：玩家 100、居民 1,850、公库 150。
+          仅本地游戏内模拟，未连接真实区块链、钱包或资金；居民仍为经济账户，尚未绑定场景动作。
           自动测试、构建与签名校验通过；真机验证待完成。测试签名可能与旧版不同，卸载重装会清除存档。
           NOTES
-          gh release create v1.4.0-economy android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 手机 / 平板通用版 1.4 · 小镇经济' --notes-file notes.md
+          gh release create v1.5.0-beta android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 手机 / 平板通用版 1.5 · BETA 加密市场' --notes-file notes.md

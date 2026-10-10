@@ -241,3 +241,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #111; color:
 @media (max-height: 400px) and (orientation: landscape) {
   .touch-layout .touch-more { width: 264px; grid-template-columns: repeat(4,minmax(0,1fr)); }
 }
+
+.market-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:12px 0; }
+#coinQuantity, #coinPrice { width:100px; max-width:100%; min-height:44px; padding:6px; border:1px solid var(--line); border-radius:6px; color:var(--ink); background:#30343b; }
+@media (max-width:600px) { .market-grid { gap:6px; } }

@@ -1,3 +1,5 @@
+import { placeOrder, cancelOrder, setCryptoEnabled, marketRound, totalCoins } from './crypto-market.js';
+import { accountLabel } from './economy-ledger.js';
 import { GOODS, price as economyPrice, totalMoney, tickEconomy, economyRound, pickupCargo, deliverCargo, issueMoney } from './economy.js';
 import { MOD, setPower, applyPowers } from './mods.js';
 import { CAMERA_LABELS } from './camera-modes.js';
@@ -507,21 +509,52 @@ function openPowers() {
   });
 }
 document.getElementById('powersButton').onclick = () => { if (mode === 'play') { if (ui.open) ui.close(); else openPowers(); } };
+const economyEsc = value => String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function openCrypto(){
+  unlock();const e=G.economy,c=e.crypto,buys=c.orders.filter(o=>o.side==='buy').sort((a,b)=>b.price-a.price),sells=c.orders.filter(o=>o.side==='sell').sort((a,b)=>a.price-b.price);
+  const held=c.orders.filter(o=>o.owner==='player'&&o.side==='sell').reduce((n,o)=>n+o.quantity,0);
+  ui.panel('BETA · 加密貨幣市場',`<div class="note">遊戲內模擬資產 BETA · 初始發行 2,100 枚。本測試版無後續發行入口，未接真實鏈、錢包或資金。</div>
+    <div class="row"><div>Beta 模式<div class="ds">關閉會撤銷所有訂單並退還託管資產；持幣與成交記錄保留。</div></div><button data-market="toggle">${c.enabled?'已開啟 · 點擊關閉':'已關閉 · 點擊開啟'}</button></div>
+    <div class="row"><div>${c.volume?'最近成交價':'初始參考價（尚無成交）'}</div><b>NT$${c.price} / BETA</b></div>
+    <div class="note">初始分配：阿嬤 100 枚 · 公庫 150 枚 · 居民 1,850 枚。買賣只轉移所有權。</div>
+    <div class="row"><div>可用持幣 / 掛單凍結</div><b>${c.holders.player} / ${held} BETA</b></div>
+    <div class="row"><div>可用小鎮貨幣 / 買單託管</div><b>NT$${e.player} / ${c.orders.filter(o=>o.owner==='player'&&o.side==='buy').reduce((n,o)=>n+o.quantity*o.price,0)}</b></div>
+    <div class="note">全鎮持幣 ${totalCoins(c)} / 2,100 · 累計成交 ${c.volume} 枚 · 最佳買價 ${buys[0]?.price??'—'} · 最佳賣價 ${sells[0]?.price??'—'}</div>
+    <div class="row"><label>數量 <input id="coinQuantity" type="number" min="1" max="2100" step="1" value="1" inputmode="numeric"></label><label>限價 NT$ <input id="coinPrice" type="number" min="1" max="100000" step="1" value="${c.price}" inputmode="numeric"></label></div>
+    <div class="row"><div class="acts"><button data-market="buy" ${c.enabled?'':'disabled'}>掛買單</button><button data-market="sell" ${c.enabled?'':'disabled'}>掛賣單</button><button data-market="step" ${c.enabled?'':'disabled'}>推進一輪</button><button data-market="back">小鎮經濟</button></div></div>
+    <div class="note">限價單按價格及時間排序撮合，以較早訂單的價格成交；可部分成交。無對手時保留訂單，不會憑空成交。</div>
+    <div class="note">居民保留生活費，缺錢時賣幣、資金充裕時買幣。現金超過 NT$600 且可用持幣估值超過 NT$2,000 的居民暫停工作；現金超過 NT$700 增加消費。</div>
+    <div class="market-grid"><div><b>買單</b>${buys.slice(0,8).map(o=>`<div class="note">${economyEsc(accountLabel(o.owner))} · ${o.quantity} 枚 @ ${o.price}</div>`).join('')||'<div class="note">暫無</div>'}</div><div><b>賣單</b>${sells.slice(0,8).map(o=>`<div class="note">${economyEsc(accountLabel(o.owner))} · ${o.quantity} 枚 @ ${o.price}</div>`).join('')||'<div class="note">暫無</div>'}</div></div>
+    <b>我的未成交訂單</b>${c.orders.filter(o=>o.owner==='player').map(o=>`<div class="row"><div>${o.side==='buy'?'買':'賣'} ${o.quantity} 枚 @ ${o.price}</div><button data-cancel="${o.id}">撤單</button></div>`).join('')||'<div class="note">暫無</div>'}
+    <b>近期成交</b><div class="note">${c.trades.slice(0,10).map(t=>`${economyEsc(accountLabel(t.buyer))} ← ${economyEsc(accountLabel(t.seller))} · ${t.quantity} 枚 @ NT$${t.price}`).join('<br>')||'尚無成交'}</div>`,el=>{
+      el.querySelectorAll('[data-market]').forEach(b=>b.onclick=()=>{
+        const a=b.dataset.market;if(a==='back'){openEconomy();return;}
+        if(a==='toggle'){setCryptoEnabled(e,!c.enabled);if(c.enabled)marketRound(e);}
+        if(a==='step')economyRound(e);
+        if(a==='buy'||a==='sell'){const r=placeOrder(e,'player',a,Number(el.querySelector('#coinQuantity').value),Number(el.querySelector('#coinPrice').value));if(!r.ok){ui.toast(r.error,true);return;}}
+        doSave();openCrypto();
+      });
+      el.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=()=>{cancelOrder(e,Number(b.dataset.cancel),'player');doSave();openCrypto();});
+    });
+}
 function openEconomy() {
   unlock(); const e=G.economy;
   const near=p=>Math.hypot(player.pos.x-p.x,player.pos.z-p.z)<12;
   ui.panel('小鎮經濟 · NT$', `<div class="note">第 ${e.round} 輪 · 遊玩中每 15 秒推進一輪，暫停 / 選單不推進。12 戶居民是經濟模擬帳戶，尚未綁定場景 NPC 動作。</div>
-    <div class="row"><div>阿嬤的小鎮錢包（有限）</div><b>NT$${e.player}</b></div>
+    <div class="row"><div>阿嬤的小鎮錢包（有限）</div><b>NT$${e.player}</b></div><div class="note">累計收入 NT$${e.flows.player?.in||0} · 累計支出 NT$${e.flows.player?.out||0}（含交易託管與退款）</div>
     <div class="note">無限錢保留原玩法；麵包、汽水、寶力大補改用小鎮錢包並消耗真實庫存。任務收入仍屬原錢包。</div>
-    <div class="row"><div>流通貨幣 / 累計增發</div><b>NT$${totalMoney(e)} / ${e.issued}</b></div>
-    <div class="note">生產商 ${e.producer} · 商店 ${e.shop} · 公庫 ${e.bank} · 居民 ${e.households.reduce((n,h)=>n+h.cash,0)} · 未滿足需求 ${e.households.filter(h=>h.hunger>0).length} 戶</div>
+    <div class="row"><div>BETA 加密貨幣市場<div class="ds">${e.crypto.enabled?'已開啟':'已關閉'} · 初始 2,100 枚</div></div><button data-e="crypto">進入 Beta</button></div><div class="row"><div>流通貨幣 / 累計增發</div><b>NT$${totalMoney(e)} / ${e.issued}</b></div>
+    <div class="note">生產商 ${e.producer} · 商店 ${e.shop} · 公庫 ${e.bank} · 交易託管 ${e.cryptoEscrow} · 居民 ${e.households.reduce((n,h)=>n+h.cash,0)} · 未滿足需求 ${e.households.filter(h=>h.hunger>0).length} 戶</div>
     ${Object.entries(GOODS).map(([id,g])=>`<div class="row"><div>${g.name}<div class="ds">商店 ${e.stock[id]} · 倉庫 ${e.warehouse[id]}</div></div><b>NT$${economyPrice(e,id)}</b></div>`).join('')}
     <div class="row"><div>送貨 · 菜市場領取 → 柑仔店交貨<div class="ds">攜帶 ${e.cargo} 份麵包 · 商店支付運費 NT$40</div></div><div class="acts"><button data-e="pickup" ${near(P.market)&&!e.cargo?'':'disabled'}>領貨</button><button data-e="deliver" ${near(P.shop)&&e.cargo?'':'disabled'}>交貨</button><button data-e="route">導航</button></div></div>
     <div class="row"><div>經濟實驗</div><div class="acts"><button data-e="step">推進一輪</button><button data-e="supply">${e.supply?'停止生產':'恢復生產'}</button><button data-e="issue">增發 NT$1,000</button></div></div>
     <div class="note">價格受庫存與增發量影響。增發係數是實驗規則，尚未包含完整金融市場。停止生產後倉庫會逐步耗盡。</div>
-    <div class="note">${e.logs.map(x=>`第 ${x.round} 輪 · ${x.message}`).join('<br>')||'小鎮經濟剛啟動'}</div>`,el=>{
+    <div class="note">本輪工資 ${e.metrics?.wages||0} · 銷售 ${e.metrics?.sales||0} · 生產 ${e.metrics?.production||0} 件 · 工作 ${e.metrics?.workers||0} 人</div>
+    <b>最近收支帳本（最近 120 筆）</b><div class="note">${e.ledger.slice(0,16).map(t=>`${economyEsc(accountLabel(t.from||''))} → ${economyEsc(accountLabel(t.to||''))} · NT$${t.amount} · ${economyEsc(t.reason)}`).join('<br>')||'尚無交易'}</div>
+    <div class="note">${e.logs.map(x=>`第 ${x.round} 輪 · ${economyEsc(x.message)}`).join('<br>')||'小鎮經濟剛啟動'}</div>`,el=>{
       el.querySelectorAll('[data-e]').forEach(button=>button.onclick=()=>{
         const action=button.dataset.e;
+        if(action==='crypto'){openCrypto();return;}
         if(action==='route'){ui.close();const p=e.cargo?P.shop:P.market;ui.toast(e.cargo?'送到柑仔店，能力 → 小鎮經濟 → 交貨':'到菜市場，能力 → 小鎮經濟 → 領貨');const old=blips.findIndex(b=>b.label==='送貨');if(old>=0)blips.splice(old,1);blips.push({x:p.x,z:p.z,icon:'📦',color:'#f2c230',label:'送貨',route:true});return;}
         if(action==='pickup'&&near(P.market))pickupCargo(e);
         if(action==='deliver'&&near(P.shop)&&!deliverCargo(e))ui.toast('商店資金不足，暫時無法收貨',true);
