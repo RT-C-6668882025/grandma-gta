@@ -1,4 +1,5 @@
 import { MOD, setPower, applyPowers } from './mods.js';
+import { CAMERA_LABELS } from './camera-modes.js';
 // 阿嬤俠盜：田庄大亂鬥 — bootstrap and main loop.
 
 import * as THREE from 'three';
@@ -326,6 +327,7 @@ function step(d) {
   } else if (ui.open === 'map' && hit('KeyM')) ui.close();
   else if (ui.open === 'panel' && hit('Tab', 'KeyI')) ui.close();
   const playing = !ui.open && !locked && !player.down;
+  if (playing && hit('KeyC')) switchCamera();
   if (!ui.open) orbit.input(mouse.dx, mouse.dy, mouse.wheel);
   const { f, r } = orbit.basis();
   const fw = playing ? (down('KeyW', 'ArrowUp') ? 1 : 0) - (down('KeyS', 'ArrowDown') ? 1 : 0) : 0;
@@ -427,8 +429,15 @@ function step(d) {
   // ---------- world, camera, hud
   sky.update(d, player.pos, true, WX);
   tickWorld(d, player.pos);
-  if (player.veh) { const want = player.veh.def.car ? 7.5 : 5.2; if (orbit.want < want) orbit.want = want; }
-  orbit.update(d, player.pos, 1.45 + (player.veh ? 0.6 : 0));
+  orbit.update(d, player.pos, 1.45 + (player.veh ? 0.6 : 0), {
+    heading: player.veh ? player.veh.heading : player.heading,
+    moving: playing && (player.veh ? Math.abs(player.veh.speed) > .5 : fw > 0 && rt === 0),
+    vehicleDistance: player.veh ? (player.veh.def.car ? 6 : 4.5) : 0,
+  });
+  const firstPerson = orbit.mode === 'first' && !orbit.override;
+  player.actor.root.visible = !firstPerson;
+  if (player.veh && firstPerson) player.veh.root.visible = false;
+  document.getElementById('cameraButton').textContent = CAMERA_LABELS[orbit.mode] + ' · C';
   ui.camYaw = orbit.yaw;
   hudT -= d;
   if (hudT <= 0) { hudT = 1 / 15; ui.hud(player, sky, STATES[WX.state].icon + ' ' + STATES[WX.state].name); }
@@ -471,6 +480,11 @@ function tickWorld(d, focus) {
   for (const v of vehicles) if (v.lights) v.lights.visible = dark;
 }
 
+function switchCamera() {
+  if (mode !== 'play' || !orbit || inputLocked() || dance.on || ui.open) return;
+  orbit.cycleMode(); ui.toast(CAMERA_LABELS[orbit.mode]);
+}
+document.getElementById('cameraButton').onclick = switchCamera;
 function openPowers() {
   unlock();
   const labels = { invincible: '無敵 / 無限體力（包含當前車輛）', money: '無限錢', speed: '超速', fly: '飛行（步行模式）' };
@@ -486,6 +500,7 @@ function openPowers() {
 document.getElementById('powersButton').onclick = () => { if (mode === 'play') { if (ui.open) ui.close(); else openPowers(); } };
 function pauseHtml() {
   return `<div class="note" style="font-size:14px;line-height:1.9">
+    <b>視角</b>：C / 畫面上的視角按鈕切換第三人稱、第一人稱、上帝視角；滾輪調整第三人稱距離或上帝視角高度。<br>
     <b>走路</b>：WASD 移動 · Shift 跑 · Q 痞步 · 左鍵/J 打人 · G 丟藍白拖 · X 抽菸 · H 喝補藥 · B 嚼檳榔 · 空白鍵 罵人 · E 互動<br>
     <b>車輛</b>：F 上車/搶車/下車 · W/S 油門倒車 · A/D 轉向 · 空白鍵 剎車/喇叭 · R 換電台<br>
     <b>介面</b>：Tab 背包 · T 老人機 · M 地圖 · 1-9 選對話 · Esc 暫停</div>
