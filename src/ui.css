@@ -196,3 +196,44 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #111; color:
 #powerSpeed { min-height: 44px; padding: 8px; margin-left: auto; background: #30343b; color: var(--ink); border-radius: 8px; border: 1px solid var(--line); }
 [data-power] { min-height: 44px; margin-left: auto; }
 .touch-actions { max-width: 285px; }
+.touch-more { position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: max(135px, env(safe-area-inset-bottom)); width: 270px; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 6px; padding: 8px; background: rgba(15,18,20,.92); border: 1px solid var(--line); border-radius: 14px; }
+.touch-more[hidden] { display: none; }
+@media (max-height: 540px), (max-width: 600px) {
+  .touch-layout #touchStick { width: 112px; height: 112px; left: max(12px,env(safe-area-inset-left)); bottom: max(12px,env(safe-area-inset-bottom)); }
+  .touch-layout #touchStick i { width: 42px; height: 42px; }
+  .touch-layout .touch-actions { width: 196px; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 4px; right: max(8px,env(safe-area-inset-right)); bottom: max(12px,env(safe-area-inset-bottom)); }
+  .touch-layout #touchControls button { padding: 6px 4px; font-size: 11px; }
+  .touch-layout .touch-actions button { min-height: 48px; font-size: 12px; }
+  .touch-layout .touch-tools { left: max(8px,env(safe-area-inset-left)); top: max(8px,env(safe-area-inset-top)); transform: none; width: auto; max-width: 55vw; flex-wrap: wrap; gap: 4px; }
+  .touch-layout #displayTools { top: max(8px,env(safe-area-inset-top)); gap: 4px; }
+  .touch-layout #displayTools button { padding: 6px; font-size: 11px; }
+  .touch-layout:not(.has-mouse) #mouseMode { display: none; }
+  .touch-layout .touch-more { width: 200px; right: max(8px,env(safe-area-inset-right)); bottom: max(120px,env(safe-area-inset-bottom)); gap: 4px; padding: 6px; }
+  .touch-layout #topright { right: 8px; top: 64px; }
+  .touch-layout #clockline { font-size: 11px; }
+  .touch-layout #money { font-size: 20px; }
+  .touch-layout #wanted { font-size: 18px; height: 24px; }
+  .touch-layout #weaponBox { gap: 5px; padding: 4px; }
+  .touch-layout #weaponBox .wi { font-size: 22px; }
+  .touch-layout #weaponBox .wn { font-size: 11px; }
+  .touch-layout #mapBox { width: 100px; left: 12px; bottom: 142px; }
+  .touch-layout #minimap { width: 100px; height: 64px; }
+  .touch-layout #objective { bottom: 120px; font-size: 13px; }
+  .touch-layout #subs { bottom: 58px; max-width: 40vw; font-size: 13px; }
+  .touch-layout #prompt { bottom: 156px; font-size: 12px; padding: 6px; }
+}
+@media (max-width: 600px) and (orientation: portrait) {
+  .touch-layout .touch-tools { left: 8px; right: 8px; max-width: none; justify-content: center; }
+  .touch-layout #displayTools { top: 62px; left: 8px; right: 8px; justify-content: center; flex-wrap: wrap; }
+  .touch-layout #touchControls .rotate-hint { top: 110px; }
+  .touch-layout #topright { top: 135px; }
+  .touch-layout #money { font-size: 18px; }
+  .touch-layout #objective { top: 170px; bottom: auto; max-width: 90vw; }
+  .touch-layout #prompt { top: 210px; bottom: auto; max-width: 90vw; }
+  .touch-layout #subs { bottom: 250px; max-width: 90vw; }
+  .touch-layout .slots { grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width: 380px) {
+  .touch-layout #touchStick { width: 96px; height: 96px; }
+  .touch-layout .touch-actions, .touch-layout .touch-more { width: 180px; }
+}

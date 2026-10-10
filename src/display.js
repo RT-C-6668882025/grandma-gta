@@ -21,6 +21,7 @@ export function initDisplay(canvas, state) {
   const trackCursor = e => {
     if ((e.pointerType && e.pointerType !== 'mouse') || e.sourceCapabilities?.firesTouchEvents) return;
     hasMouse = true; overCanvas = e.target === canvas;
+    document.body.classList.add('has-mouse');
     cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px';
   };
   addEventListener('pointermove', trackCursor);

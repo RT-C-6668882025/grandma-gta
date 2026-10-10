@@ -21,6 +21,7 @@ import { buildBirds } from './birds.js';
 import { initInput, keys, mouse, hit, down, endFrame, setUiBlocking, unlock, pollMouseLook } from './input.js';
 import { initDisplay } from './display.js';
 import { initTouch } from './touch.js';
+import { touchMove, mixMovement } from './touch-motion.js';
 import { OrbitCam } from './camera.js';
 import { ui, blips } from './ui.js';
 import { G, on, emit, load, save, newGame, hasSave, give, equip, addWanted, count, spend } from './game.js';
@@ -280,7 +281,7 @@ function tickPlayerDown(dt) {
 // ------------------------------------------------------------------ loop
 const clock = new THREE.Clock();
 let prNow = prMax, frAcc = 0, frN = 0;
-const updateTouch = initTouch(canvas, () => ({ active: mode === 'play', playing: mode === 'play' && !ui.open && !inputLocked() && !dance.on && !player?.down, dancing: dance.on && !ui.open, toast: message => ui.toast(message) }));
+const updateTouch = initTouch(canvas, () => ({ active: mode === 'play', playing: mode === 'play' && !ui.open && !inputLocked() && !dance.on && !player?.down, dancing: dance.on && !ui.open, driving: !!player?.veh, toast: message => ui.toast(message) }));
 const updateDisplay = initDisplay(canvas, () => ({ playing: mode === 'play' && !ui.open && !inputLocked() && !dance.on }));
 function frame() {
   updateDisplay();
@@ -334,8 +335,8 @@ function step(d) {
     if (playing && hit('KeyZ')) orbit.recenter(player.veh ? player.veh.heading : player.heading);
   }
   const { f, r } = orbit.basis();
-  const fw = playing ? (down('KeyW', 'ArrowUp') ? 1 : 0) - (down('KeyS', 'ArrowDown') ? 1 : 0) : 0;
-  const rt = playing ? (down('KeyD', 'ArrowRight') ? 1 : 0) - (down('KeyA', 'ArrowLeft') ? 1 : 0) : 0;
+  const { fw, rt } = mixMovement((down('KeyW', 'ArrowUp') ? 1 : 0) - (down('KeyS', 'ArrowDown') ? 1 : 0),
+    (down('KeyD', 'ArrowRight') ? 1 : 0) - (down('KeyA', 'ArrowLeft') ? 1 : 0), touchMove, playing);
   // ---------- vehicle / on foot
   const v = player.veh;
   if (playing && hit('KeyF')) {
