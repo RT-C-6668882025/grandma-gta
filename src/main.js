@@ -17,6 +17,7 @@ import { initFx, tickFx, fx, addEmitter } from './fx.js';
 import { buildGrass } from './grass.js';
 import { buildBirds } from './birds.js';
 import { initInput, keys, mouse, hit, down, endFrame, setUiBlocking, unlock } from './input.js';
+import { initDisplay } from './display.js';
 import { initTouch } from './touch.js';
 import { OrbitCam } from './camera.js';
 import { ui, blips } from './ui.js';
@@ -276,7 +277,9 @@ function tickPlayerDown(dt) {
 const clock = new THREE.Clock();
 let prNow = prMax, frAcc = 0, frN = 0;
 const updateTouch = initTouch(canvas, () => ({ active: mode === 'play', playing: mode === 'play' && !ui.open && !inputLocked() && !dance.on && !player?.down, dancing: dance.on && !ui.open, toast: message => ui.toast(message) }));
+const updateDisplay = initDisplay(canvas, () => ({ playing: mode === 'play' && !ui.open && !inputLocked() && !dance.on }));
 function frame() {
+  updateDisplay();
   updateTouch();
   requestAnimationFrame(frame);
   const d = clock.getDelta();

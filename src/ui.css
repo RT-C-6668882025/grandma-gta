@@ -183,3 +183,12 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #111; color:
 
 #title button:disabled { opacity: .45; cursor: wait; }
 #loadmsg:not(:empty) { padding: 12px 18px; border-radius: 10px; background: rgba(0,0,0,.88); max-width: 90vw; text-align: center; z-index: 10; }
+#displayTools { position: fixed; right: max(10px, env(safe-area-inset-right)); bottom: max(8px, env(safe-area-inset-bottom)); display: flex; gap: 6px; z-index: 12; }
+#displayTools button { min-height: 44px; padding: 8px 12px; color: var(--ink); background: rgba(15,18,20,.85); border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+.touch-layout #displayTools { bottom: auto; top: max(65px, env(safe-area-inset-top)); }
+#gameCursor { position: fixed; width: 18px; height: 25px; pointer-events: none; z-index: 20; background: white; clip-path: polygon(0 0, 100% 63%, 57% 67%, 75% 100%, 52% 100%, 36% 72%, 0 94%); filter: drop-shadow(0 1px 2px #000); }
+#aimMarker { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); font: 26px system-ui; color: white; text-shadow: 0 1px 3px black; pointer-events: none; z-index: 9; }
+#gameCursor[hidden], #aimMarker[hidden] { display: none; }
+#fullscreenHelp { max-width: min(520px, 90vw); max-height: 85dvh; overflow: auto; color: var(--ink); background: #17191c; border: 1px solid var(--line); border-radius: 12px; padding: 22px; line-height: 1.6; }
+#fullscreenHelp::backdrop { background: rgba(0,0,0,.7); }
+#fullscreenHelp a, #fullscreenHelp button { display: inline-block; min-height: 44px; padding: 10px 16px; margin: 6px; border-radius: 8px; border: 1px solid var(--line); color: var(--ink); background: #30343b; text-decoration: none; }

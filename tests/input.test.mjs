@@ -43,3 +43,19 @@ test('unsupported pointer lock immediately falls back to left attack and right d
   input.keys.add('KeyW'); input.holdKey('KeyE',1,true);
   listeners.get('blur')(); assert.equal(input.down('KeyW','KeyE'),false);
 });
+
+test('visible cursor mode never asks for pointer lock and right drag uses client coordinates', () => {
+  input.resetInput(); input.setMouseMode('drag');
+  const listeners = new Map(), canvasListeners = new Map(); let requests = 0;
+  globalThis.addEventListener = (type, fn) => listeners.set(type, fn);
+  globalThis.document = {pointerLockElement:null, addEventListener:(type,fn)=>listeners.set(type,fn)};
+  input.initInput({requestPointerLock:()=>{requests++},addEventListener:(type,fn)=>canvasListeners.set(type,fn)});
+  canvasListeners.get('mousedown')({button:0,clientX:20,clientY:30});
+  assert.equal(requests,0); assert.equal(input.mouse.clickL,true);
+  listeners.get('mouseup')({button:0});
+  canvasListeners.get('mousedown')({button:2,clientX:20,clientY:30});
+  listeners.get('mousemove')({clientX:32,clientY:25,movementX:0,movementY:0});
+  assert.equal(input.mouse.dx,12);assert.equal(input.mouse.dy,-5);
+  listeners.get('mouseup')({button:2}); input.endFrame();
+  listeners.get('mousemove')({clientX:40,clientY:35}); assert.equal(input.mouse.dx,0);
+});

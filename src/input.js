@@ -6,6 +6,15 @@ export const mouse = { dx: 0, dy: 0, wheel: 0, left: false, right: false, clickL
 let el = null;
 let dragging = false;
 let lockFailed = false;
+let savedMouseMode = null, lastPointer = null;
+try { savedMouseMode = localStorage.getItem('ama-mouse-mode'); } catch {}
+export const getMouseMode = () => savedMouseMode || ((globalThis.navigator?.maxTouchPoints || 0) > 0 ? 'drag' : 'lock');
+export function setMouseMode(mode) {
+  if (!['drag', 'lock'].includes(mode)) return;
+  savedMouseMode = mode; lockFailed = false; resetInput();
+  try { localStorage.setItem('ama-mouse-mode', mode); } catch {}
+  if (mode === 'drag') unlock();
+}
 const touchKeys = new Map();
 export function holdKey(code, source, held) {
   if (!touchKeys.has(code)) touchKeys.set(code, new Set());
@@ -14,7 +23,7 @@ export function holdKey(code, source, held) {
   else owners.delete(source);
 }
 export function resetInput() {
-  keys.clear(); pressed.clear(); touchKeys.clear(); dragging = false;
+  keys.clear(); pressed.clear(); touchKeys.clear(); dragging = false; lastPointer = null;
   mouse.left = mouse.right = mouse.clickL = false;
   mouse.dx = mouse.dy = mouse.wheel = 0;
 }
@@ -37,31 +46,36 @@ export function initInput(canvas) {
   canvas.addEventListener('mousedown', (e) => {
     if (uiBlocking() || e.sourceCapabilities?.firesTouchEvents) return;
     if (!canvas.requestPointerLock) lockFailed = true;
+    lastPointer = { x: e.clientX, y: e.clientY };
     // embedded views (the app's browser pane, some iframes) refuse pointer lock:
     // then left = attack and right-drag turns the camera
-    if (lockFailed) {
+    if (lockFailed || getMouseMode() === 'drag') {
       if (e.button === 0) { mouse.left = true; mouse.clickL = true; }
       if (e.button === 2) { mouse.right = true; dragging = true; }
       return;
     }
     if (!mouse.locked && e.button === 0) {
       try { const r = canvas.requestPointerLock?.(); if (r && r.catch) r.catch(() => { lockFailed = true; }); } catch (err) { lockFailed = true; }
-      dragging = true;
       return;
     }
     if (e.button === 0) { mouse.left = true; mouse.clickL = true; }
     if (e.button === 2) { mouse.right = true; dragging = true; }
   });
   addEventListener('mouseup', (e) => {
-    if (e.button === 0) { mouse.left = false; if (!lockFailed) dragging = false; }
+    if (e.button === 0) mouse.left = false;
     if (e.button === 2) { mouse.right = false; dragging = false; }
   });
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   addEventListener('mousemove', (e) => {
-    if (!uiBlocking() && (mouse.locked || dragging)) { mouse.dx += e.movementX; mouse.dy += e.movementY; }
+    if (!uiBlocking() && (mouse.locked || dragging)) {
+      const absolute = !mouse.locked && Number.isFinite(lastPointer?.x) && Number.isFinite(e.clientX);
+      mouse.dx += absolute ? e.clientX - lastPointer.x : (e.movementX || 0);
+      mouse.dy += absolute ? e.clientY - lastPointer.y : (e.movementY || 0);
+    }
+    lastPointer = { x: e.clientX, y: e.clientY };
   });
   canvas.addEventListener('wheel', (e) => { mouse.wheel += Math.sign(e.deltaY); e.preventDefault(); }, { passive: false });
-  document.addEventListener('pointerlockchange', () => { mouse.locked = document.pointerLockElement === el; });
+  document.addEventListener('pointerlockchange', () => { mouse.locked = document.pointerLockElement === el; resetInput(); });
 }
 export function unlock() { if (document.pointerLockElement) document.exitPointerLock(); }
 export function endFrame() {
