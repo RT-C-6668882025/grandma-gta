@@ -5,9 +5,10 @@ export function initDisplay(canvas, state) {
   const help = document.getElementById('fullscreenHelp'), cursor = document.getElementById('gameCursor'), aim = document.getElementById('aimMarker');
   document.getElementById('openGameTab').href = location.href;
   document.getElementById('closeFullscreenHelp').onclick = () => help.close();
-  const label = () => { mode.textContent = `滑鼠：${getMouseMode() === 'drag' ? '顯示游標' : '鎖定視角'}`; };
+  const labels = { free: '移動轉視角', drag: '右鍵拖曳', lock: '鎖定視角' };
+  const label = () => { mode.textContent = `滑鼠：${labels[getMouseMode()]}`; };
   label();
-  mode.onclick = () => { setMouseMode(getMouseMode() === 'drag' ? 'lock' : 'drag'); label(); };
+  mode.onclick = () => { const modes = ['free', 'drag', 'lock']; setMouseMode(modes[(modes.indexOf(getMouseMode()) + 1) % modes.length]); label(); };
   full.onclick = async () => {
     // Fullscreen needs the original click's activation. Do not await other work first.
     try { await toggleFullscreen(); }
@@ -25,6 +26,7 @@ export function initDisplay(canvas, state) {
   canvas.addEventListener('pointerleave', () => { overCanvas = false; });
   addEventListener('blur', () => { overCanvas = false; });
   return () => {
+    label();
     const playing = state().playing && !help.open;
     const showCursor = playing && !mouse.locked && hasMouse && overCanvas;
     cursor.hidden = !showCursor; canvas.style.cursor = showCursor ? 'none' : 'default';

@@ -59,3 +59,25 @@ test('visible cursor mode never asks for pointer lock and right drag uses client
   listeners.get('mouseup')({button:2}); input.endFrame();
   listeners.get('mousemove')({clientX:40,clientY:35}); assert.equal(input.mouse.dx,0);
 });
+
+test('Android pointer-only mouse movement turns the camera without holding a button', () => {
+  input.setMouseMode('free'); input.setUiBlocking(()=>false);
+  globalThis.PointerEvent = class {};
+  const listeners=new Map(), handlers=new Map();
+  globalThis.addEventListener=(name,fn)=>listeners.set(name,fn);
+  globalThis.document={pointerLockElement:null,addEventListener:(name,fn)=>listeners.set(name,fn)};
+  const canvas={addEventListener:(name,fn)=>handlers.set(name,fn)};
+  input.initInput(canvas);
+  listeners.get('pointermove')({pointerType:'mouse',target:canvas,clientX:20,clientY:30,movementX:0,movementY:0});
+  listeners.get('pointermove')({pointerType:'mouse',target:canvas,clientX:32,clientY:25,movementX:0,movementY:0});
+  assert.equal(input.mouse.dx,12);assert.equal(input.mouse.dy,-5);
+  listeners.get('mousemove')({target:canvas,clientX:32,clientY:25,movementX:12,movementY:-5});
+  assert.equal(input.mouse.dx,12); // compatibility events must not double camera input
+  input.endFrame();
+  listeners.get('pointermove')({pointerType:'touch',target:canvas,clientX:50,clientY:50});
+  assert.equal(input.mouse.dx,0);
+  input.setUiBlocking(()=>true);
+  listeners.get('pointermove')({pointerType:'mouse',target:canvas,clientX:60,clientY:60});
+  assert.equal(input.mouse.dx,0);
+  input.setUiBlocking(()=>false);delete globalThis.PointerEvent;
+});
