@@ -81,3 +81,43 @@ test('Android pointer-only mouse movement turns the camera without holding a but
   assert.equal(input.mouse.dx,0);
   input.setUiBlocking(()=>false);delete globalThis.PointerEvent;
 });
+
+function mouseEnvironment(mode='free') {
+ input.resetInput();input.setMouseMode(mode);input.setUiBlocking(()=>false);
+ globalThis.PointerEvent=class {};
+ const listeners=new Map(), handlers=new Map();
+ globalThis.addEventListener=(name,fn)=>listeners.set(name,fn);
+ globalThis.document={pointerLockElement:null,addEventListener:(name,fn)=>listeners.set(name,fn)};
+ const canvas={requestPointerLock(){},addEventListener:(name,fn)=>handlers.set(name,fn)};
+ input.initInput(canvas);return {listeners,handlers,canvas};
+}
+test('WebView mousemove works even when PointerEvent API exists but emits no pointermove',()=>{
+ const {listeners,canvas}=mouseEnvironment();
+ listeners.get('mousemove')({target:canvas,clientX:20,clientY:30});
+ listeners.get('mousemove')({target:canvas,clientX:45,clientY:22});
+ assert.equal(input.mouse.dx,25);assert.equal(input.mouse.dy,-8);
+ delete globalThis.PointerEvent;
+});
+test('silent pointer lock refusal retains hover camera control',()=>{
+ const {listeners,handlers,canvas}=mouseEnvironment('lock');
+ handlers.get('pointerdown')({pointerType:'mouse',target:canvas,button:0,clientX:10,clientY:20});
+ assert.equal(input.mouse.locked,false);
+ listeners.get('mousemove')({target:canvas,clientX:26,clientY:15});
+ assert.equal(input.mouse.dx,16);assert.equal(input.mouse.dy,-5);
+ delete globalThis.PointerEvent;
+});
+test('locked pointer-only movement works and paired relative events are deduplicated',()=>{
+ const {listeners,canvas}=mouseEnvironment();input.mouse.locked=true;
+ listeners.get('pointermove')({pointerType:'mouse',target:canvas,movementX:12,movementY:-4,timeStamp:10});
+ listeners.get('mousemove')({target:canvas,movementX:12,movementY:-4,timeStamp:10});
+ assert.equal(input.mouse.dx,12);assert.equal(input.mouse.dy,-4);
+ listeners.get('pointermove')({pointerType:'mouse',target:canvas,movementX:12,movementY:-4,timeStamp:20});
+ assert.equal(input.mouse.dx,24);
+ input.mouse.locked=false;delete globalThis.PointerEvent;
+});
+test('touch compatibility mouse events cannot move the mouse camera',()=>{
+ const {listeners,canvas}=mouseEnvironment();
+ listeners.get('mousemove')({target:canvas,movementX:100,movementY:50,sourceCapabilities:{firesTouchEvents:true}});
+ assert.equal(input.mouse.dx,0);assert.equal(input.mouse.dy,0);
+ delete globalThis.PointerEvent;
+});

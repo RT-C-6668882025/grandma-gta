@@ -6,9 +6,9 @@ export const mouse = { dx: 0, dy: 0, wheel: 0, left: false, right: false, clickL
 let el = null;
 let dragging = false;
 let lockFailed = false;
-let savedMouseMode = null, lastPointer = null;
+let savedMouseMode = null, lastPointer = null, lastRelative = null;
 try { savedMouseMode = localStorage.getItem('ama-mouse-mode-v2'); } catch {}
-export const getMouseMode = () => lockFailed ? 'free' : (savedMouseMode || ((globalThis.navigator?.maxTouchPoints || 0) > 0 ? 'free' : 'lock'));
+export const getMouseMode = () => lockFailed ? 'free' : (savedMouseMode || 'free');
 export function setMouseMode(mode) {
   if (!['free', 'drag', 'lock'].includes(mode)) return;
   savedMouseMode = mode; lockFailed = false; resetInput();
@@ -23,7 +23,7 @@ export function holdKey(code, source, held) {
   else owners.delete(source);
 }
 export function resetInput() {
-  keys.clear(); pressed.clear(); touchKeys.clear(); dragging = false; lastPointer = null;
+  keys.clear(); pressed.clear(); touchKeys.clear(); dragging = false; lastPointer = lastRelative = null;
   mouse.left = mouse.right = mouse.clickL = false;
   mouse.dx = mouse.dy = mouse.wheel = 0;
 }
@@ -68,19 +68,32 @@ export function initInput(canvas) {
     if (e.button === 2) { mouse.right = false; dragging = false; }
   });
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-  const move = (e) => {
+  const move = (e, stream) => {
     if (e.pointerType && e.pointerType !== 'mouse') return;
-    const hoverLook = getMouseMode() === 'free' && e.target === canvas;
+    if (e.sourceCapabilities?.firesTouchEvents) return;
+    // Keep hover look usable while pointer lock is pending or silently refused.
+    const hoverLook = getMouseMode() !== 'drag' && e.target === canvas;
     if (!uiBlocking() && (mouse.locked || dragging || hoverLook)) {
-      const absolute = !mouse.locked && Number.isFinite(lastPointer?.x) && Number.isFinite(e.clientX);
-      mouse.dx += absolute ? e.clientX - lastPointer.x : (e.movementX || 0);
-      mouse.dy += absolute ? e.clientY - lastPointer.y : (e.movementY || 0);
+      const coordinates = !mouse.locked && Number.isFinite(e.clientX) && Number.isFinite(e.clientY);
+      const absolute = coordinates && Number.isFinite(lastPointer?.x) && Number.isFinite(lastPointer?.y);
+      const dx = absolute ? e.clientX - lastPointer.x : (e.movementX || 0);
+      const dy = absolute ? e.clientY - lastPointer.y : (e.movementY || 0);
+      // Absolute coordinates naturally suppress compatibility events at the same point.
+      // Relative-only / locked input needs an explicit cross-stream pair check.
+      const stamp = Number.isFinite(e.timeStamp) ? e.timeStamp : null;
+      const duplicate = !coordinates && lastRelative && lastRelative.stream !== stream &&
+        lastRelative.dx === dx && lastRelative.dy === dy &&
+        ((stamp === null && lastRelative.stamp === null) || (stamp !== null && lastRelative.stamp !== null && Math.abs(stamp - lastRelative.stamp) <= 2));
+      if (!duplicate) {
+        mouse.dx += dx; mouse.dy += dy;
+        if (!coordinates) lastRelative = { stream, dx, dy, stamp };
+      }
     }
     lastPointer = { x: e.clientX, y: e.clientY };
   };
-  // Android can emit Pointer Events without compatibility mousemove events.
-  if (pointerEvents) addEventListener('pointermove', e => { if (!mouse.locked) move(e); });
-  addEventListener('mousemove', e => { if (mouse.locked || !pointerEvents) move(e); });
+  // API availability does not guarantee which event stream Android actually emits.
+  if (pointerEvents) addEventListener('pointermove', e => move(e, 'pointer'));
+  addEventListener('mousemove', e => move(e, 'mouse'));
   canvas.addEventListener('pointerleave', () => { if (!dragging) lastPointer = null; });
   canvas.addEventListener('pointercancel', () => { mouse.left = mouse.right = false; dragging = false; lastPointer = null; });
   canvas.addEventListener('wheel', (e) => { mouse.wheel += Math.sign(e.deltaY); e.preventDefault(); }, { passive: false });
@@ -89,6 +102,7 @@ export function initInput(canvas) {
 export function unlock() { if (document.pointerLockElement) document.exitPointerLock(); }
 export function endFrame() {
   pressed.clear();
+  lastRelative = null;
   mouse.dx = mouse.dy = mouse.wheel = 0;
   mouse.clickL = false;
 }

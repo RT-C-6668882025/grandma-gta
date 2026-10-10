@@ -18,11 +18,13 @@ export function initDisplay(canvas, state) {
     full.textContent = document.fullscreenElement || document.webkitFullscreenElement ? '退出全螢幕' : '全螢幕';
   });
   let overCanvas = false, hasMouse = false;
-  addEventListener('pointermove', e => {
-    if (e.pointerType !== 'mouse') return;
+  const trackCursor = e => {
+    if ((e.pointerType && e.pointerType !== 'mouse') || e.sourceCapabilities?.firesTouchEvents) return;
     hasMouse = true; overCanvas = e.target === canvas;
     cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px';
-  });
+  };
+  addEventListener('pointermove', trackCursor);
+  addEventListener('mousemove', trackCursor);
   canvas.addEventListener('pointerleave', () => { overCanvas = false; });
   addEventListener('blur', () => { overCanvas = false; });
   return () => {

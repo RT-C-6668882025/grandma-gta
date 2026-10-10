@@ -28,15 +28,15 @@ jobs:
           name: grandma-gta-god-apk
           path: android/build/grandma-gta-god.apk
           retention-days: 30
-      - name: Publish camera edition
+      - name: Publish mouse fix
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v1.1.0-camera >/dev/null 2>&1; then exit 0; fi
+          if gh release view v1.1.1-mouse >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
-          默认近距离第三人称跟随，C 键或视角按钮切换第一人称和上帝视角。
-          下车恢复步行镜头距离，保留全部无敌版能力。Android 8.0 及以上，离线横屏。
+          修复 Android WebView 只发送 mousemove 时无法转动视角的问题。
+          兼容 Pointer Events 和鼠标事件并去重；鼠标锁定失败仍能移动转向。保留三种视角和无敌能力。
           构建和签名校验通过，尚未完成真机验证。个人测试签名与旧版不同，已安装旧版时需要卸载后安装，本地存档会清除。
           NOTES
-          gh release create v1.1.0-camera android/build/grandma-gta-god.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 三视角版 1.1' --notes-file notes.md
+          gh release create v1.1.1-mouse android/build/grandma-gta-god.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 鼠标修复版 1.1.1' --notes-file notes.md
