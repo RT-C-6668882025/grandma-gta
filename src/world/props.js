@@ -1,3 +1,4 @@
+import { loadModel } from '../model-loader.js';
 // Static Tripo props from Combos, drawn as instanced meshes: each GLB is
 // normalised (centred on x/z, base at y = 0, height 1) and every mesh inside it
 // becomes one InstancedMesh holding all placements.
@@ -16,7 +17,7 @@ export async function loadPropModels(names, dir = 'props') {
   await Promise.all(names.map(async (n) => {
     if (models[n]) return;
     try {
-      const g = await loader.loadAsync(`assets/${dir}/${n}.glb`);
+      const g = await loadModel(loader, `assets/${dir}/${n}.glb`);
       g.scene.updateMatrixWorld(true);
       const box = new THREE.Box3().setFromObject(g.scene), s = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
       const norm = new THREE.Matrix4().makeScale(1 / s.y, 1 / s.y, 1 / s.y).multiply(new THREE.Matrix4().makeTranslation(-c.x, -box.min.y, -c.z));
@@ -57,9 +58,10 @@ export function placeInstanced(scene, name, items, o = {}) {
 // ---------------------------------------------------------------- where everything goes
 export const speakers = []; // positions of 大媽音響 (music sources)
 export async function dressTown(scene) {
-  await loadPropModels(['vegstall', 'foodcart', 'stools', 'speaker', 'gascan', 'shelf', 'fridge', 'betelstand']);
-  await loadPropModels(['fitness', 'hoop', 'judges', 'drumstool']);
-  await loadPropModels(['radio', 'newspaper', 'trophy'], 'gear');
+  await Promise.all([
+    loadPropModels(['vegstall', 'foodcart', 'stools', 'speaker', 'gascan', 'shelf', 'fridge', 'betelstand', 'fitness', 'hoop', 'judges', 'drumstool', 'temple', 'karaoke', 'calldesk']),
+    loadPropModels(['radio', 'newspaper', 'trophy'], 'gear'),
+  ]);
   const R = rng(99);
   const mx = P.market.x;
   // market street: vegetable stalls both sides, food carts, stools, gas cans

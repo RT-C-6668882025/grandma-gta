@@ -48,6 +48,11 @@ setScene(scene);
 setVehicleScene(scene);
 
 const loadmsg = document.getElementById('loadmsg');
+const startButtons = ['bNew', 'bCont'].map(id => document.getElementById(id));
+startButtons.forEach(button => { button.disabled = true; });
+addEventListener('model-progress', ({ detail }) => {
+  if (mode === 'loading') loadmsg.textContent = `載入模型 ${detail.completed}/${detail.requested} · 已讀取 ${(detail.bytes / 1048576).toFixed(1)} MB（下載過的模型會保留在本機）`;
+});
 const tick = () => new Promise((r) => setTimeout(r, 0));
 let player = null, sky = null, orbit = null, rain = null, grass = null, birds = null;
 const audio = new Audio();
@@ -62,6 +67,9 @@ async function boot() {
   const assets = Promise.all([
     loadActors(['ama', 'agong', 'son', 'shopkeeper', 'thug', 'police', 'auntie', 'farmer', 'qipao', 'jinya', 'oldman', 'man2', 'aunt2', 'thug2']),
     loadGear(), loadVehicles(), loadAnimals(),
+    loadPropModels(['banyan'], 'nature'),
+    loadPropModels(['vegstall', 'foodcart', 'stools', 'speaker', 'gascan', 'shelf', 'fridge', 'betelstand', 'fitness', 'hoop', 'judges', 'drumstool', 'temple', 'karaoke', 'calldesk']),
+    loadPropModels(['radio', 'newspaper', 'trophy'], 'gear'),
   ]);
   const { paint } = buildTerrain(scene);
   loadmsg.textContent = '正在蓋騎樓、掛招牌……';
@@ -88,12 +96,18 @@ async function boot() {
   document.getElementById('bCont').classList.toggle('hidden', !hasSave());
   loadmsg.textContent = '';
   mode = 'title';
+  startButtons.forEach(button => { button.disabled = false; });
   document.getElementById('bNew').onclick = () => start(false);
   document.getElementById('bCont').onclick = () => start(true);
   if (q.has('autostart')) start(q.get('autostart') === 'continue');
 }
 
 async function start(cont) {
+  if (mode !== 'title') return;
+  mode = 'starting';
+  startButtons.forEach(button => { button.disabled = true; });
+  loadmsg.textContent = '正在準備遊戲……';
+  await tick();
   law.reset();
   audio.start();
   if (cont) load(); else newGame();
@@ -110,6 +124,8 @@ async function start(cont) {
   document.getElementById('title').classList.add('hidden');
   ui.show(true);
   mode = 'play';
+  loadmsg.textContent = '';
+  startButtons.forEach(button => { button.disabled = false; });
   audio.setRadio(false, G.radio);
   if (!q.has('nostory')) setTimeout(() => nextMission(), 600);
 }
@@ -278,7 +294,7 @@ function frame() {
 }
 function step(d) {
   dt = d; time += d;
-  if (mode === 'loading') return;
+  if (mode === 'loading' || mode === 'starting') { endFrame(); return; }
   if (mode === 'title') {
     const a = time * 0.05;
     camera.position.set(-20 + Math.cos(a) * 60, 22, -10 + Math.sin(a) * 60);

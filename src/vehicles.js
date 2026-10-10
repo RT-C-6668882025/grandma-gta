@@ -1,3 +1,4 @@
+import { loadModel } from './model-loader.js';
 // Vehicles: Tripo models of an 80s–90s Taiwanese street — 阿嬤's tricycle,
 // bicycle, scooters, a sedan, the little blue pickup (發財車) and the yellow
 // taxi. Arcade handling (bicycle model steering), collision as a chain of
@@ -36,7 +37,7 @@ for (const d of Object.values(VTYPES)) {
 export async function loadVehicles() {
   await Promise.all(Object.entries(VTYPES).map(async ([k, v]) => {
     try {
-      const g = await loader.loadAsync(`assets/props/${v.glb}.glb`);
+      const g = await loadModel(loader, `assets/props/${v.glb}.glb`);
       const obj = g.scene;
       obj.rotation.y = v.rotY;
       obj.updateMatrixWorld(true);

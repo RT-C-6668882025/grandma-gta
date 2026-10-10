@@ -1,3 +1,4 @@
+import { loadModel } from './model-loader.js';
 // Items: every hat / glasses / chain / top / weapon 阿嬤 can wear, plus
 // consumables, sellables and quest items. Wearables build an Object3D in a
 // canonical frame the actor attaches to a bone:
@@ -89,7 +90,7 @@ export async function loadGear() {
   const need = new Set(['sunglasses', 'stick', 'bat', 'slipper', 'newspaper', 'bag', 'trophy', 'golfclub']);
   await Promise.all([...need].map(async (n) => {
     try {
-      const g = await loader.loadAsync(`assets/gear/${n}.glb`);
+      const g = await loadModel(loader, `assets/gear/${n}.glb`);
       g.scene.traverse((o) => { if (o.isMesh) { o.castShadow = true; } });
       glbs[n] = g.scene;
     } catch (e) { console.warn('gear missing', n); }

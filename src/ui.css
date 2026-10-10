@@ -180,3 +180,6 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #111; color:
   .touch-tools { flex-wrap: wrap; justify-content: center; width: 96%; }
   .touch-layout #mapBox { bottom: 205px; }
 }
+
+#title button:disabled { opacity: .45; cursor: wait; }
+#loadmsg:not(:empty) { padding: 12px 18px; border-radius: 10px; background: rgba(0,0,0,.88); max-width: 90vw; text-align: center; z-index: 10; }

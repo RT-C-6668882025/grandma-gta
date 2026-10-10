@@ -1,3 +1,4 @@
+import { loadModel } from './model-loader.js';
 // Rigged characters. Two skeletons are in play:
 //  - Tripo Studio / Mixamo preset (阿嬤): 65 bones named mixamorig*, 17 clips
 //    (idle, walk, run, swagger, box_01/02, front_kick_01, slash, pitch_baseball,
@@ -118,7 +119,7 @@ async function loadKind(kind) {
   if (T[kind]) return T[kind];
   const def = KINDS[kind];
   const rig = RIG[def.rig || 'tripo'];
-  const g = await loader.loadAsync(`assets/chars/${def.file}.glb`);
+  const g = await loadModel(loader, `assets/chars/${def.file}.glb`);
   const scene = g.scene;
   scene.updateMatrixWorld(true);
   const bones = {};

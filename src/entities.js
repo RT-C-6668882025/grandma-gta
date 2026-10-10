@@ -1,3 +1,4 @@
+import { loadModel } from './model-loader.js';
 // People and animals: the player (阿嬤), townsfolk with simple GTA-ish brains
 // (wander / flee / fight back / call it in), thugs, the old cop, family,
 // taxi fares; dogs, cats and roosters; thrown slippers and newspapers;
@@ -487,7 +488,7 @@ export async function loadAnimals() {
   const loader = new GLTFLoader();
   await Promise.all(Object.keys(SPECIES).map(async (n) => {
     try {
-      const g = await loader.loadAsync(`assets/animals/${n}.glb`);
+      const g = await loadModel(loader, `assets/animals/${n}.glb`);
       g.scene.traverse((o) => { if (o.isMesh) o.castShadow = true; });
       const box = new THREE.Box3().setFromObject(g.scene);
       AT[n] = { scene: g.scene, clip: g.animations[0], box };
