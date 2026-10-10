@@ -4,7 +4,7 @@ export function mountMap(el,{base,world,player,markers,navigation,onNavigate,onC
   const cv=el.querySelector('canvas'),ctx=cv.getContext('2d'),search=el.querySelector('#mapSearch'),filter=el.querySelector('#mapFilter'),results=el.querySelector('#mapResults'),label=el.querySelector('#mapSelection'),go=el.querySelector('[data-map="go"]');
   const view={x:0,z:20,width:1,height:1,scale:1};let selected=null,fit=true,disposed=false;
   const visible=()=>markers.filter(m=>(filter.value==='all'||m.category===filter.value)&&m.label.toLowerCase().includes(search.value.trim().toLowerCase()));
-  function select(m){selected=m;go.disabled=false;label.textContent=m.label+' · '+(m.detail||'')+' · 直線 '+Math.round(distance(player.pos,m))+' m';draw();}
+  function select(m){selected=m;go.disabled=false;label.textContent=m.label+' · '+(m.detail||'')+' · 直線 '+Math.round(distance(player.pos,m))+' m';navigation=onNavigate(m);label.textContent=m.label+' · 導航 '+Math.round(routeLength(navigation.path))+' m';draw();}
   function draw(){if(disposed)return;const dpr=Math.min(devicePixelRatio||1,2),box=cv.getBoundingClientRect();view.width=Math.max(1,box.width);view.height=Math.max(1,box.height);if(fit){view.scale=Math.min(view.width,view.height)/580;fit=false;}cv.width=Math.round(view.width*dpr);cv.height=Math.round(view.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#17251e';ctx.fillRect(0,0,view.width,view.height);
     const corner=worldToMap({x:-world/2,z:-world/2},view);ctx.drawImage(base,corner.x,corner.z,world*view.scale,world*view.scale);
     if(navigation?.path?.length){ctx.strokeStyle='#f2c230';ctx.lineWidth=3;ctx.beginPath();navigation.path.forEach((p,i)=>{const t=worldToMap(p,view);i?ctx.lineTo(t.x,t.z):ctx.moveTo(t.x,t.z);});ctx.stroke();}

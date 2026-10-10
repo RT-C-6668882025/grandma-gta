@@ -1,9 +1,10 @@
+import {INDUSTRIES,ensureIndustries,investIndustry} from './town-currency.js';
 import {populate,chooseJobs,JOB_LABELS} from './residents.js';
 import {createResidentScene,MINE,residentTarget} from './resident-scene.js';
 import {roadRoute,distance,routeLength} from './map-navigation.js';
 import { placeOrder, cancelOrder, setCryptoEnabled, marketRound, totalCoins, mintCoins } from './crypto-market.js';
 import { accountLabel } from './economy-ledger.js';
-import { GOODS, price as economyPrice, totalMoney, tickEconomy, economyRound, pickupCargo, deliverCargo, issueMoney } from './economy.js';
+import { GOODS, price as economyPrice, totalMoney, tickEconomy, economyRound, pickupCargo, deliverCargo, issueMoney, setCoinMode } from './economy.js';
 import { MOD, setPower, applyPowers } from './mods.js';
 import { CAMERA_LABELS } from './camera-modes.js';
 // 阿嬤俠盜：田庄大亂鬥 — bootstrap and main loop.
@@ -525,6 +526,7 @@ function openPowers() {
 document.getElementById('powersButton').onclick = () => { if (mode === 'play') { if (ui.open) ui.close(); else openPowers(); } };
 const economyEsc = value => String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function openCrypto(){
+  if(G.economy.coinMode){openIndustries();return;}
   unlock();const e=G.economy,c=e.crypto,buys=c.orders.filter(o=>o.side==='buy').sort((a,b)=>b.price-a.price),sells=c.orders.filter(o=>o.side==='sell').sort((a,b)=>a.price-b.price);
   const held=c.orders.filter(o=>o.owner==='player'&&o.side==='sell').reduce((n,o)=>n+o.quantity,0);
   ui.panel('BETA · 加密貨幣市場',`<div class="note">遊戲內模擬資產 BETA · 初始供應 2,100 枚：你持有 2,000，礦池預留 100。你擁有發币權。</div>
@@ -555,9 +557,25 @@ function openCrypto(){
       el.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=()=>{cancelOrder(e,Number(b.dataset.cancel),'player');doSave();openCrypto();});
     });
 }
+function openIndustries(){
+  unlock();const e=G.economy;ensureIndustries(e);
+  ui.panel('我的貨幣 · 現有產業',`<div class="note">${e.coinMode?'BETA 已用於工資、三種商品、批發、送貨及居民服務消費。':'BETA 結算已暫停，資產保留。'} 你的可用持幣 ${e.crypto.holders.player} · 礦池 ${e.crypto.reserve} · 總供應 ${e.crypto.supply}。初始你有 2,000 枚，產業從零持幣開始。</div>
+    <div class="row"><label>注資 / 增發數量 <input id="industryAmount" type="number" min="1" max="1000000" step="1" value="100"></label><button data-town="mint">增發給自己</button><button data-town="reserve">增發到礦池</button></div>
+    <div class="note">先為菜市場與柑仔店各注資，再推進一輪。工資每人每輪 2 BETA，麵包起價 2 BETA；不足資金不發薪，停止產業不工作。挖礦每 3 輪得 1 枚，此模式由生產開關控制算力供應，不額外扣 NT$ 電費。</div>
+    ${INDUSTRIES.map(d=>{const b=e.industries[d.id];return `<div class="row"><div><b>${d.name}</b><div class="ds">ID ${d.id} · 所有者：阿嬤 · ${e.crypto.holders['i:'+d.id]} BETA · 收入 ${b.revenue} / 工資 ${b.wages} · 分配 ${e.households.filter(h=>h.industry===d.id&&h.job==='work').length} 人</div></div><div class="acts"><button data-invest="${d.id}">注資</button><button data-operate="${d.id}">${b.open?'停業':'開業'}</button><button data-location="${d.id}">導航</button></div></div>`;}).join('')}
+    <div class="note">菜市場生產、柑仔店零售與批發已接入真實庫存；其餘四處先接入工資與定期服務付款，具體醫療、工具、回收與檳榔效果仍沿用原玩法。主線人物及原警察行為保留。</div>
+    <div class="acts"><button data-town="step">推進一輪</button><button data-town="residents">居民名冊</button><button data-town="off">切回 NT$ 實驗</button><button data-town="back">返回</button></div>
+    <b>BETA 收支（最近 120 筆）</b><div class="note">${e.coinLedger.slice(0,20).map(t=>`${economyEsc(t.from)} → ${economyEsc(t.to)} · ${t.amount} BETA · ${economyEsc(t.reason)}`).join('<br>')||'尚無收支，從給產業注資開始。'}</div>`,el=>{
+      const amount=()=>Number(el.querySelector('#industryAmount').value);
+      el.querySelectorAll('[data-invest]').forEach(b=>b.onclick=()=>{if(!investIndustry(e,b.dataset.invest,amount()))ui.toast('持幣不足或數量無效',true);doSave();openIndustries();});
+      el.querySelectorAll('[data-operate]').forEach(b=>b.onclick=()=>{e.industries[b.dataset.operate].open=!e.industries[b.dataset.operate].open;doSave();openIndustries();});
+      el.querySelectorAll('[data-location]').forEach(b=>b.onclick=()=>{const d=INDUSTRIES.find(d=>d.id===b.dataset.location);ui.close();navigateTo({...d,label:d.name});});
+      el.querySelectorAll('[data-town]').forEach(b=>b.onclick=()=>{const a=b.dataset.town;if(a==='back'){openEconomy();return;}if(a==='residents'){openResidents();return;}if(a==='off'){setCoinMode(e,false);doSave();openEconomy();return;}if(a==='mint'||a==='reserve'){if(!mintCoins(e,'player',amount(),a==='mint'?'player':'reserve'))ui.toast('增發數量或權限無效',true);}if(a==='step')economyRound(e);doSave();openIndustries();});
+    });
+}
 function openResidents(){
   unlock();const e=G.economy;
-  ui.panel('小鎮居民 · '+e.households.length+' 人',`<div class="row"><label>人口 <select id="population">${[12,24,48,96].map(n=>`<option ${n===e.households.length?'selected':''}>${n}</option>`).join('')}</select></label><button id="applyPopulation">套用人口</button><button id="residentBack">返回經濟</button></div><div class="note">新增居民由公庫支付最多 NT$100 安置費；居民從零持幣開始。減少人口時先撤單，现金歸公庫，持幣回礦池。手機最多 24 名入場，其餘保持後台經濟模擬。</div>${e.households.map(h=>`<div class="row"><div><b>${economyEsc(h.name)}</b> · ${h.age} 歲<div class="ds">${JOB_LABELS[h.job]||'生產'} · ${h.placed?(h.present?'已抵達':'通勤 / 受阻'):'後台模擬'} · NT$${h.cash} · ${e.crypto.holders['h:'+h.id]} BETA · 累計挖出 ${h.mined||0}</div></div><button data-resident="${h.id}">地圖定位</button></div>`).join('')}`,el=>{
+  ui.panel('小鎮居民 · '+e.households.length+' 人',`<div class="row"><label>人口 <select id="population">${[12,24,48,96].map(n=>`<option ${n===e.households.length?'selected':''}>${n}</option>`).join('')}</select></label><button id="applyPopulation">套用人口</button><button id="residentBack">返回經濟</button></div><div class="note">新增居民由公庫支付最多 NT$100 安置費；居民從零持幣開始。減少人口時先撤單，现金歸公庫，持幣回礦池。手機最多 24 名入場，其餘保持後台經濟模擬。</div>${e.households.map(h=>`<div class="row"><div><b>${economyEsc(h.name)}</b> · ${h.uid} · ${h.age} 歲<div class="ds">${JOB_LABELS[h.job]||'生產'} · ${h.placed?(h.present?'已抵達':'通勤 / 受阻'):'後台模擬'} · NT$${h.cash} · ${e.crypto.holders['h:'+h.id]} BETA · 累計挖出 ${h.mined||0}</div></div><button data-resident="${h.id}">地圖定位</button></div>`).join('')}`,el=>{
     el.querySelector('#residentBack').onclick=openEconomy;
     el.querySelector('#applyPopulation').onclick=()=>{populate(e,Number(el.querySelector('#population').value));chooseJobs(e);residentScene.sync(e,ents);doSave();openResidents();};
     el.querySelectorAll('[data-resident]').forEach(b=>b.onclick=()=>{const h=e.households[Number(b.dataset.resident)];ui.close();navigateTo({...h.location||residentTarget(h),label:h.name});ui.bigmap(player);});
@@ -566,13 +584,13 @@ function openResidents(){
 function openEconomy() {
   unlock(); const e=G.economy;
   const near=p=>Math.hypot(player.pos.x-p.x,player.pos.z-p.z)<12;
-  ui.panel('小鎮經濟 · NT$', `<div class="note">第 ${e.round} 輪 · 遊玩中每 15 秒推進一輪，暫停 / 選單不推進。${e.households.length} 名居民 · 最多 24 名入場，其餘後台模擬。</div>
-    <div class="row"><div>阿嬤的小鎮錢包（有限）</div><b>NT$${e.player}</b></div><div class="note">累計收入 NT$${e.flows.player?.in||0} · 累計支出 NT$${e.flows.player?.out||0}（含交易託管與退款）</div>
-    <div class="note">無限錢保留原玩法；麵包、汽水、寶力大補改用小鎮錢包並消耗真實庫存。任務收入仍屬原錢包。</div>
-    <div class="row"><div>居民管理 · ${e.households.length} 人</div><button data-e="residents">名冊 / 人口</button></div><div class="row"><div>BETA 加密貨幣市場<div class="ds">${e.crypto.enabled?'已開啟':'已關閉'} · 初始 2,100 枚</div></div><button data-e="crypto">進入 Beta</button></div><div class="row"><div>流通貨幣 / 累計增發</div><b>NT$${totalMoney(e)} / ${e.issued}</b></div>
+  ui.panel(e.coinMode?'小鎮經濟 · BETA':'小鎮經濟 · NT$', `<div class="note">第 ${e.round} 輪 · 遊玩中每 15 秒推進一輪，暫停 / 選單不推進。${e.households.length} 名居民 · 最多 24 名入場，其餘後台模擬。</div>
+    <div class="row"><div>阿嬤的小鎮錢包（有限）</div><b>${e.coinMode?e.crypto.holders.player+' BETA':'NT$'+e.player}</b></div><div class="note">累計收入 NT$${e.flows.player?.in||0} · 累計支出 NT$${e.flows.player?.out||0}（含交易託管與退款）</div>
+    <div class="note">${e.coinMode?'麵包、汽水、寶力大補以 BETA 支付；任務及其餘原商品仍用原錢包。':'麵包、汽水、寶力大補使用有限 NT$ 錢包；原玩法無限錢獨立。'}</div>
+    <div class="row"><div>我的貨幣 · 工資 / 商品 / 產業<div class="ds">啟用後，六處現有產業使用 BETA；先注資，再讓居民工作賺幣。</div></div><button data-e="industries">${e.coinMode?'管理產業 / 我的幣':'啟用我的幣'}</button></div><div class="row"><div>居民管理 · ${e.households.length} 人</div><button data-e="residents">名冊 / 人口</button></div><div class="row"><div>BETA 加密貨幣市場<div class="ds">${e.crypto.enabled?'已開啟':'已關閉'} · 初始 2,100 枚</div></div><button data-e="crypto">進入 Beta</button></div><div class="row"><div>流通貨幣 / 累計增發</div><b>NT$${totalMoney(e)} / ${e.issued}</b></div>
     <div class="note">生產商 ${e.producer} · 商店 ${e.shop} · 公庫 ${e.bank} · 交易託管 ${e.cryptoEscrow} · 居民 ${e.households.reduce((n,h)=>n+h.cash,0)} · 未滿足需求 ${e.households.filter(h=>h.hunger>0).length} 戶</div>
-    ${Object.entries(GOODS).map(([id,g])=>`<div class="row"><div>${g.name}<div class="ds">商店 ${e.stock[id]} · 倉庫 ${e.warehouse[id]}</div></div><b>NT$${economyPrice(e,id)}</b></div>`).join('')}
-    <div class="row"><div>送貨 · 菜市場領取 → 柑仔店交貨<div class="ds">攜帶 ${e.cargo} 份麵包 · 商店支付運費 NT$40</div></div><div class="acts"><button data-e="pickup" ${near(P.market)&&!e.cargo?'':'disabled'}>領貨</button><button data-e="deliver" ${near(P.shop)&&e.cargo?'':'disabled'}>交貨</button><button data-e="route">導航</button></div></div>
+    ${Object.entries(GOODS).map(([id,g])=>`<div class="row"><div>${g.name}<div class="ds">商店 ${e.stock[id]} · 倉庫 ${e.warehouse[id]}</div></div><b>${economyPrice(e,id)} ${e.coinMode?'BETA':'NT$'}</b></div>`).join('')}
+    <div class="row"><div>送貨 · 菜市場領取 → 柑仔店交貨<div class="ds">攜帶 ${e.cargo} 份麵包 · 商店支付運費 ${e.coinMode?'3 BETA':'NT$40'}</div></div><div class="acts"><button data-e="pickup" ${near(P.market)&&!e.cargo?'':'disabled'}>領貨</button><button data-e="deliver" ${near(P.shop)&&e.cargo?'':'disabled'}>交貨</button><button data-e="route">導航</button></div></div>
     <div class="row"><div>經濟實驗</div><div class="acts"><button data-e="step">推進一輪</button><button data-e="supply">${e.supply?'停止生產':'恢復生產'}</button><button data-e="issue">增發 NT$1,000</button></div></div>
     <div class="note">價格受庫存與增發量影響。增發係數是實驗規則，尚未包含完整金融市場。停止生產後倉庫會逐步耗盡。</div>
     <div class="note">本輪工資 ${e.metrics?.wages||0} · 銷售 ${e.metrics?.sales||0} · 生產 ${e.metrics?.production||0} 件 · 工作 ${e.metrics?.workers||0} 人</div>
@@ -580,6 +598,7 @@ function openEconomy() {
     <div class="note">${e.logs.map(x=>`第 ${x.round} 輪 · ${economyEsc(x.message)}`).join('<br>')||'小鎮經濟剛啟動'}</div>`,el=>{
       el.querySelectorAll('[data-e]').forEach(button=>button.onclick=()=>{
         const action=button.dataset.e;
+        if(action==='industries'){setCoinMode(e,true);doSave();openIndustries();return;}
         if(action==='residents'){openResidents();return;}
         if(action==='crypto'){openCrypto();return;}
         if(action==='route'){ui.close();const p=e.cargo?P.shop:P.market;ui.toast(e.cargo?'送到柑仔店，能力 → 小鎮經濟 → 交貨':'到菜市場，能力 → 小鎮經濟 → 領貨');navigateTo({...p,label:'送貨'});return;}

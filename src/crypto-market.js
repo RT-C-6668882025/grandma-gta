@@ -1,4 +1,5 @@
 import {cashOf,transfer} from './economy-ledger.js';
+import {INDUSTRIES} from './town-currency.js';
 export const INITIAL_COINS=2100;
 export function createCrypto(count=24){return {rules:2,enabled:false,supply:INITIAL_COINS,reserve:100,minted:0,authority:'player',issuance:[],price:10,previous:10,serial:0,volume:0,holders:{player:2000,bank:0,...Object.fromEntries(Array.from({length:count},(_,i)=>['h:'+i,0]))},orders:[],trades:[]};}
 export function totalCoins(c){return Object.values(c.holders).reduce((a,b)=>a+b,0)+c.orders.filter(o=>o.side==='sell').reduce((a,o)=>a+o.quantity,0)+(c.reserve||0);}
@@ -11,13 +12,13 @@ export function mineRound(e){
   const c=e.crypto;if(!c.enabled||c.reserve<=0)return;
   const count=e.households.length;
   for(let n=0;n<count&&c.reserve>0;n++){
-    const h=e.households[(n+e.round)%count];if(h.job!=='mine'||h.present===false||!transfer(e,'h:'+h.id,'producer',2,'挖礦電費'))continue;
+    const h=e.households[(n+e.round)%count];if(h.job!=='mine'||h.present===false||!(e.coinMode?e.supply>0:transfer(e,'h:'+h.id,'producer',2,'挖礦電費')))continue;
     h.miningProgress=(h.miningProgress||0)+1;
     if(h.miningProgress>=3){h.miningProgress-=3;h.mined=(h.mined||0)+1;c.holders['h:'+h.id]++;c.reserve--;}
   }
 }
 export function cancelOrder(e,id,owner){const c=e.crypto,o=c.orders.find(o=>o.id===id&&o.owner===owner);if(!o)return false;if(o.side==='buy')transfer(e,'cryptoEscrow',owner,o.quantity*o.price,'撤銷買單退款');else c.holders[owner]+=o.quantity;c.orders=c.orders.filter(x=>x!==o);return true;}
-export function setCryptoEnabled(e,on){if(!on)for(const o of [...e.crypto.orders])cancelOrder(e,o.id,o.owner);e.crypto.enabled=!!on;}
+export function setCryptoEnabled(e,on){if(!on)for(const o of [...e.crypto.orders])cancelOrder(e,o.id,o.owner);e.crypto.enabled=!!on;if(!on)e.coinMode=false;}
 export function placeOrder(e,owner,side,quantity,price){
   const c=e.crypto;if(!c.enabled||!Object.hasOwn(c.holders,owner)||!['buy','sell'].includes(side)||!Number.isSafeInteger(quantity)||quantity<1||quantity>c.supply||!Number.isSafeInteger(price)||price<1||price>100000||c.orders.filter(o=>o.owner===owner).length>=10)return {ok:false,error:'訂單無效或超過 10 筆未成交訂單'};
   if(side==='buy'){if(!transfer(e,owner,'cryptoEscrow',quantity*price,'買單資金託管'))return {ok:false,error:'可用小鎮貨幣不足'};}else{if(c.holders[owner]<quantity)return {ok:false,error:'可用持幣不足'};c.holders[owner]-=quantity;}
@@ -37,7 +38,7 @@ export function matchOrders(e){
   }
 }
 export function marketRound(e){
-  const c=e.crypto;if(!c.enabled)return;
+  const c=e.crypto;if(!c.enabled||e.coinMode)return;
   for(const o of [...c.orders])if(o.owner!=='player')cancelOrder(e,o.id,o.owner);
   for(let n=0;n<e.households.length;n++){
     const i=(n+e.round)%e.households.length,owner='h:'+i,h=e.households[i],coins=c.holders[owner],p=c.price;
@@ -47,8 +48,8 @@ export function marketRound(e){
   }
 }
 export function validCrypto(e){
-  const c=e.crypto,count=e.households.length,owners=['player','bank',...Array.from({length:count},(_,i)=>'h:'+i)];
-  if(!c||c.rules!==2||c.authority!=='player'||typeof c.enabled!=='boolean'||!Number.isSafeInteger(c.minted)||c.minted<0||c.supply!==INITIAL_COINS+c.minted||c.supply>1000000000||!Number.isSafeInteger(c.reserve)||c.reserve<0||!Number.isSafeInteger(c.price)||c.price<1||c.price>100000||!Number.isSafeInteger(c.serial)||c.serial<0||!Number.isSafeInteger(c.volume)||c.volume<0||!c.holders||Object.keys(c.holders).length!==count+2||owners.some(k=>!Number.isSafeInteger(c.holders[k])||c.holders[k]<0)||!Array.isArray(c.orders)||c.orders.length>(count+2)*10)return false;
+  const c=e.crypto,count=e.households.length,owners=['player','bank',...Array.from({length:count},(_,i)=>'h:'+i),...INDUSTRIES.map(d=>'i:'+d.id).filter(k=>Object.hasOwn(c?.holders||{},k))];
+  if(!c||c.rules!==2||c.authority!=='player'||typeof c.enabled!=='boolean'||!Number.isSafeInteger(c.minted)||c.minted<0||c.supply!==INITIAL_COINS+c.minted||c.supply>1000000000||!Number.isSafeInteger(c.reserve)||c.reserve<0||!Number.isSafeInteger(c.price)||c.price<1||c.price>100000||!Number.isSafeInteger(c.serial)||c.serial<0||!Number.isSafeInteger(c.volume)||c.volume<0||!c.holders||Object.keys(c.holders).length!==owners.length||owners.some(k=>!Number.isSafeInteger(c.holders[k])||c.holders[k]<0)||!Array.isArray(c.orders)||c.orders.length>(count+2)*10)return false;
   const ids=new Set();for(const o of c.orders){if(!owners.includes(o.owner)||!['buy','sell'].includes(o.side)||!Number.isSafeInteger(o.id)||o.id<1||o.id>c.serial||ids.has(o.id)||!Number.isSafeInteger(o.price)||o.price<1||o.price>100000||!Number.isSafeInteger(o.quantity)||o.quantity<1||o.quantity>c.supply)return false;ids.add(o.id);}
   return totalCoins(c)===c.supply&&e.cryptoEscrow===c.orders.filter(o=>o.side==='buy').reduce((n,o)=>n+o.quantity*o.price,0)&&(c.enabled||c.orders.length===0);
 }

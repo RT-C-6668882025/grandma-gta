@@ -58,6 +58,7 @@ export const swag = () => swagOf(G.eq) + (G.flags.smoking ? 8 : 0);
 // the cooler she looks, the better the deals (and the thugs back off)
 export function priceOf(id) {
   const it = ITEMS[id];
+  if(G.economy.coinMode&&marketPrice(G.economy,id)!==null)return marketPrice(G.economy,id);
   const disc = Math.min(0.25, swag() * 0.004);
   return Math.max(1, Math.round((marketPrice(G.economy,id) ?? it.price) * (1 - disc)));
 }

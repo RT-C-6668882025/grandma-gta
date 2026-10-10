@@ -1,17 +1,23 @@
-import {resident,chooseJobs,POPULATIONS} from './residents.js';
+import {resident,chooseJobs,POPULATIONS,restoreIdentities} from './residents.js';
+import {ensureIndustries,coinEconomyRound,coinPrice,buyWithCoins,coinTransfer} from './town-currency.js';
 import {transfer,record} from './economy-ledger.js';
-import {createCrypto,marketRound,validCrypto,migrateCrypto,mineRound} from './crypto-market.js';
+import {createCrypto,marketRound,validCrypto,migrateCrypto,mineRound,cancelOrder} from './crypto-market.js';
+export function setCoinMode(e,on){
+  if(on){for(const o of [...e.crypto.orders])cancelOrder(e,o.id,o.owner);ensureIndustries(e);e.crypto.enabled=true;}
+  e.coinMode=!!on;chooseJobs(e);return true;
+}
 export const GOODS={bread:{name:'菠蘿麵包',base:30},soda:{name:'彈珠汽水',base:25},bolida:{name:'寶力大補',base:60}};
 export function createEconomy(){return {version:1,round:0,elapsed:0,issued:0,bank:2000,producer:6000,shop:3000,player:1000,cryptoEscrow:0,crypto:createCrypto(),ledger:[],flows:{},sequence:0,metrics:{wages:0,sales:0,production:0,workers:24},households:Array.from({length:24},(_,id)=>resident(id,125)),stock:{bread:24,soda:24,bolida:12},warehouse:{bread:60,soda:60,bolida:30},supply:1,cargo:0,logs:[]};}
 export function totalMoney(e){return e.bank+e.producer+e.shop+e.player+(e.cryptoEscrow||0)+e.households.reduce((n,h)=>n+h.cash,0);}
 const log=(e,message)=>{e.logs.unshift({round:e.round,message});e.logs.length=Math.min(16,e.logs.length);};
-export function price(e,id){const g=GOODS[id];if(!g)return null;return Math.round(g.base*Math.max(.7,Math.min(2.5,24/(e.stock[id]+8)))*(1+e.issued/15000));}
-export function buyGood(e,id,amount){if(!GOODS[id]||e.stock[id]<1||!transfer(e,'player','shop',amount,'購買'+GOODS[id].name))return false;e.stock[id]--;log(e,`阿嬤購買${GOODS[id].name} · NT$${amount}`);return true;}
+export function price(e,id){const g=GOODS[id];if(!g)return null;if(e.coinMode)return coinPrice(e,id);return Math.round(g.base*Math.max(.7,Math.min(2.5,24/(e.stock[id]+8)))*(1+e.issued/15000));}
+export function buyGood(e,id,amount){if(e.coinMode)return !!GOODS[id]&&buyWithCoins(e,'player',id);if(!GOODS[id]||e.stock[id]<1||!transfer(e,'player','shop',amount,'購買'+GOODS[id].name))return false;e.stock[id]--;log(e,`阿嬤購買${GOODS[id].name} · NT$${amount}`);return true;}
 export function pickupCargo(e){if(e.cargo||e.warehouse.bread<10)return false;e.warehouse.bread-=10;e.cargo=10;log(e,'阿嬤領取 10 份麵包，等待送到柑仔店');return true;}
-export function deliverCargo(e){const cost=e.cargo*15,fee=40;if(!e.cargo||e.shop<cost+fee)return false;transfer(e,'shop','producer',cost,'送貨採購');transfer(e,'shop','player',fee,'送貨運費');e.stock.bread+=e.cargo;e.cargo=0;log(e,'阿嬤送貨完成 · 運費 NT$40');return true;}
+export function deliverCargo(e){if(e.coinMode){ensureIndustries(e);if(!e.cargo||!e.industries.shop.open||e.crypto.holders['i:shop']<e.cargo+3)return false;coinTransfer(e,'i:shop','i:market',e.cargo,'送貨採購');coinTransfer(e,'i:shop','player',3,'送貨運費');e.stock.bread+=e.cargo;e.cargo=0;return true;}const cost=e.cargo*15,fee=40;if(!e.cargo||e.shop<cost+fee)return false;transfer(e,'shop','producer',cost,'送貨採購');transfer(e,'shop','player',fee,'送貨運費');e.stock.bread+=e.cargo;e.cargo=0;log(e,'阿嬤送貨完成 · 運費 NT$40');return true;}
 export function issueMoney(e){if(e.issued>1000000000)return false;e.issued+=1000;e.bank+=1000;record(e,null,'bank',1000,'普通貨幣增發');for(let i=0;i<e.households.length;i++)transfer(e,'bank','h:'+i,Math.floor(960/e.households.length),'居民補助');log(e,'增發 NT$1,000 · 居民平分 NT$960，餘款入公庫');return true;}
 export function economyRound(e){
   e.round++;chooseJobs(e);e.metrics={wages:0,sales:0,production:0,workers:0};
+  if(e.coinMode){coinEconomyRound(e);mineRound(e);log(e,`BETA 第 ${e.round} 輪 · 工作 ${e.metrics.workers} 人 · 工資 ${e.metrics.wages} 枚 · 銷售 ${e.metrics.sales} 枚`);return;}
   for(let i=0;i<e.households.length;i++){
     const h=e.households[i],owner='h:'+i;
     if(h.working&&h.present!==false&&transfer(e,'producer',owner,28,'工資')){e.metrics.wages+=28;e.metrics.workers++;for(const id of Object.keys(GOODS)){const quantity=Math.min(240-e.warehouse[id],Math.round((id==='bolida'?1:2)*e.supply));e.warehouse[id]+=quantity;e.metrics.production+=quantity;}}
@@ -38,5 +44,8 @@ export function restoreEconomy(value){
   e.logs=(Array.isArray(e.logs)?e.logs:[]).filter(t=>typeof t.message==='string').slice(0,16);e.flows={};
   // Rebuild lifetime totals only if the stored values are valid; old saves start recording at migration.
   for(const [owner,flow] of Object.entries(value.flows||{}))if(Number.isSafeInteger(flow?.in)&&flow.in>=0&&Number.isSafeInteger(flow?.out)&&flow.out>=0)e.flows[owner]=flow;
-  e.sequence=Number.isSafeInteger(value.sequence)&&value.sequence>=0?value.sequence:0;return e;
+  e.sequence=Number.isSafeInteger(value.sequence)&&value.sequence>=0?value.sequence:0;restoreIdentities(e);
+  e.coinMode=value.coinMode===true&&e.crypto.enabled;
+  if(e.coinMode||Object.keys(e.crypto.holders).some(k=>k.startsWith('i:'))){ensureIndustries(e);for(const b of Object.values(e.industries)){b.owner='player';b.open=b.open!==false;b.revenue=Number.isSafeInteger(b.revenue)&&b.revenue>=0?b.revenue:0;b.wages=Number.isSafeInteger(b.wages)&&b.wages>=0?b.wages:0;}}
+  e.coinLedger=(Array.isArray(e.coinLedger)?e.coinLedger:[]).filter(t=>Number.isSafeInteger(t.amount)&&t.amount>0&&typeof t.reason==='string').slice(0,120);e.coinSequence=Number.isSafeInteger(e.coinSequence)&&e.coinSequence>=0?e.coinSequence:0;return e;
 }
