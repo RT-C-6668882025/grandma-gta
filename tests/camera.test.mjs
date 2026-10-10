@@ -25,15 +25,30 @@ test('first-person eye looks along movement forward and ignores zoom',()=>{
  assert.equal(c.want,0);assert.equal(c.cam.position.x,2);assert.equal(c.cam.position.y,11.363);assert.equal(c.cam.position.z,4);
  const direction=c.cam.getWorldDirection(new THREE.Vector3());const {f}=c.basis();assert.ok(direction.dot(f)>.999);
 });
-test('manual look delays follow; modes cycle and clamp to distinct pitch ranges',()=>{
+test('manual look stays free until recenter; modes clamp near vertical without flipping',()=>{
  const c=make();c.input(40,0,0);const yaw=c.yaw;
  c.update(.5,{x:0,y:0,z:0},1.45,{heading:1,moving:true});assert.equal(c.yaw,yaw);
- c.update(2,{x:0,y:0,z:0},1.45,{heading:1,moving:true});assert.notEqual(c.yaw,yaw);
- assert.equal(c.cycleMode(),'first');c.input(0,10000,0);assert.equal(c.pitch,1.15);
- assert.equal(c.cycleMode(),'god');c.input(0,-10000,0);assert.equal(c.pitch,.8);
+ c.update(20,{x:0,y:0,z:0},1.45,{heading:1,moving:true});assert.equal(c.yaw,yaw);
+ c.recenter(0);assert.equal(c.manualLook,false);const centered=c.yaw;
+ c.update(2,{x:0,y:0,z:0},1.45,{heading:1,moving:true});assert.notEqual(c.yaw,centered);
+ assert.equal(c.cycleMode(),'first');c.input(0,10000,0);assert.equal(c.pitch,1.55);
+ assert.equal(c.cycleMode(),'god');c.input(0,-10000,0);assert.equal(c.pitch,.25);
  assert.equal(c.cycleMode(),'third');
 });
 test('scripted camera override takes precedence over first-person',()=>{
  const c=make();c.setMode('first');c.override={pos:new THREE.Vector3(20,30,40),look:new THREE.Vector3()};
  c.update(1,{x:2,y:10,z:4});assert.ok(c.cam.position.x>18);
+});
+
+test('horizontal look can orbit through multiple complete turns',()=>{
+ const c=make();const initial=c.yaw;for(let i=0;i<100;i++) c.input(100,0,0);
+ assert.ok(Math.abs(c.yaw-initial)>Math.PI*8);
+ c.update(.05,{x:0,y:0,z:0});assert.ok(Number.isFinite(c.cam.position.x));
+ c.input(0,-10000,0);assert.equal(c.pitch,-1.45);
+});
+
+test('ground-safe third-person camera can still look almost straight up',()=>{
+ const c=make();c.input(0,-10000,0);c.update(.05,{x:0,y:0,z:0},1.45);
+ assert.ok(c.cam.position.y>=.45);
+ assert.ok(c.cam.getWorldDirection(new THREE.Vector3()).y>.99);
 });

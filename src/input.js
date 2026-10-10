@@ -6,7 +6,7 @@ export const mouse = { dx: 0, dy: 0, wheel: 0, left: false, right: false, clickL
 let el = null;
 let dragging = false;
 let lockFailed = false;
-let savedMouseMode = null, lastPointer = null, lastRelative = null;
+let savedMouseMode = null, lastPointer = null, lastRelative = null, overCanvas = false;
 try { savedMouseMode = localStorage.getItem('ama-mouse-mode-v2'); } catch {}
 export const getMouseMode = () => lockFailed ? 'free' : (savedMouseMode || 'free');
 export function setMouseMode(mode) {
@@ -23,7 +23,7 @@ export function holdKey(code, source, held) {
   else owners.delete(source);
 }
 export function resetInput() {
-  keys.clear(); pressed.clear(); touchKeys.clear(); dragging = false; lastPointer = lastRelative = null;
+  keys.clear(); pressed.clear(); touchKeys.clear(); dragging = false; lastPointer = lastRelative = null; overCanvas = false;
   mouse.left = mouse.right = mouse.clickL = false;
   mouse.dx = mouse.dy = mouse.wheel = 0;
 }
@@ -71,6 +71,7 @@ export function initInput(canvas) {
   const move = (e, stream) => {
     if (e.pointerType && e.pointerType !== 'mouse') return;
     if (e.sourceCapabilities?.firesTouchEvents) return;
+    overCanvas = e.target === canvas;
     // Keep hover look usable while pointer lock is pending or silently refused.
     const hoverLook = getMouseMode() !== 'drag' && e.target === canvas;
     if (!uiBlocking() && (mouse.locked || dragging || hoverLook)) {
@@ -94,10 +95,26 @@ export function initInput(canvas) {
   // API availability does not guarantee which event stream Android actually emits.
   if (pointerEvents) addEventListener('pointermove', e => move(e, 'pointer'));
   addEventListener('mousemove', e => move(e, 'mouse'));
-  canvas.addEventListener('pointerleave', () => { if (!dragging) lastPointer = null; });
+  canvas.addEventListener('pointerleave', () => { overCanvas = false; if (!dragging) lastPointer = null; });
   canvas.addEventListener('pointercancel', () => { mouse.left = mouse.right = false; dragging = false; lastPointer = null; });
   canvas.addEventListener('wheel', (e) => { mouse.wheel += Math.sign(e.deltaY); e.preventDefault(); }, { passive: false });
   document.addEventListener('pointerlockchange', () => { mouse.locked = document.pointerLockElement === el; resetInput(); });
+}
+// Absolute cursors stop at screen edges. Keep turning there without pointer lock.
+export function pollMouseLook(dt) {
+  if (uiBlocking() || mouse.locked || getMouseMode() === 'drag' || !overCanvas || !lastPointer || !el?.getBoundingClientRect) return;
+  const rect = el.getBoundingClientRect();
+  const force = (value, min, max) => {
+    if (!Number.isFinite(value) || value < min || value > max) return 0;
+    const margin = Math.min(24, (max - min) / 4);
+    if (margin <= 0) return 0;
+    if (value < min + margin) return -(min + margin - value) / margin;
+    if (value > max - margin) return (value - max + margin) / margin;
+    return 0;
+  };
+  const step = Math.max(0, Math.min(dt, .05));
+  mouse.dx += force(lastPointer.x, rect.left, rect.right) * 750 * step;
+  mouse.dy += force(lastPointer.y, rect.top, rect.bottom) * 500 * step;
 }
 export function unlock() { if (document.pointerLockElement) document.exitPointerLock(); }
 export function endFrame() {

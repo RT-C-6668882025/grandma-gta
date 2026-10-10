@@ -5,7 +5,7 @@ export function initDisplay(canvas, state) {
   const help = document.getElementById('fullscreenHelp'), cursor = document.getElementById('gameCursor'), aim = document.getElementById('aimMarker');
   document.getElementById('openGameTab').href = location.href;
   document.getElementById('closeFullscreenHelp').onclick = () => help.close();
-  const labels = { free: '移動轉視角', drag: '右鍵拖曳', lock: '鎖定視角' };
+  const labels = { free: '移動 / 邊緣轉向', drag: '右鍵拖曳', lock: '鎖定視角' };
   const label = () => { mode.textContent = `滑鼠：${labels[getMouseMode()]}`; };
   label();
   mode.onclick = () => { const modes = ['free', 'drag', 'lock']; setMouseMode(modes[(modes.indexOf(getMouseMode()) + 1) % modes.length]); label(); };

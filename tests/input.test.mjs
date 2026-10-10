@@ -121,3 +121,26 @@ test('touch compatibility mouse events cannot move the mouse camera',()=>{
  assert.equal(input.mouse.dx,0);assert.equal(input.mouse.dy,0);
  delete globalThis.PointerEvent;
 });
+
+test('stationary cursor at edge keeps turning, moving to center stops it',()=>{
+ const {listeners,canvas}=mouseEnvironment();
+ canvas.getBoundingClientRect=()=>({left:0,top:0,right:1000,bottom:600});
+ listeners.get('mousemove')({target:canvas,clientX:1000,clientY:300});input.endFrame();
+ input.pollMouseLook(.05);assert.equal(input.mouse.dx,37.5);assert.equal(input.mouse.dy,0);
+ input.endFrame();input.pollMouseLook(.05);assert.equal(input.mouse.dx,37.5);
+ listeners.get('mousemove')({target:canvas,clientX:500,clientY:300});input.endFrame();
+ input.pollMouseLook(.05);assert.equal(input.mouse.dx,0);
+ delete globalThis.PointerEvent;
+});
+test('edge turning is frame-rate independent and disabled for UI, lock and drag',()=>{
+ const {listeners,canvas}=mouseEnvironment();
+ canvas.getBoundingClientRect=()=>({left:0,top:0,right:1000,bottom:600});
+ listeners.get('mousemove')({target:canvas,clientX:0,clientY:300});input.endFrame();
+ for(let i=0;i<60;i++) input.pollMouseLook(1/60);const sixty=input.mouse.dx;input.endFrame();
+ for(let i=0;i<120;i++) input.pollMouseLook(1/120);assert.ok(Math.abs(input.mouse.dx-sixty)<1e-8);
+ input.endFrame();input.setUiBlocking(()=>true);input.pollMouseLook(.05);assert.equal(input.mouse.dx,0);
+ input.setUiBlocking(()=>false);input.mouse.locked=true;input.pollMouseLook(.05);assert.equal(input.mouse.dx,0);
+ input.mouse.locked=false;input.setMouseMode('drag');
+ listeners.get('mousemove')({target:canvas,clientX:0,clientY:300});input.pollMouseLook(.05);assert.equal(input.mouse.dx,0);
+ delete globalThis.PointerEvent;
+});

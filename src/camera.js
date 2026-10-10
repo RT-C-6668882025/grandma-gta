@@ -16,6 +16,7 @@ export class OrbitCam {
     this.want = preset.distance;
     this.cur = preset.distance;
     this.lookIdle = 0;
+    this.manualLook = false;
     this.target = new THREE.Vector3();
     this.shake = 0;
     this.override = null; // {pos, look} for cutscenes
@@ -28,8 +29,12 @@ export class OrbitCam {
     try { localStorage.setItem('ama-camera-mode-v1', mode); } catch {}
   }
   cycleMode() { this.setMode(CAMERA_MODES[(CAMERA_MODES.indexOf(this.mode) + 1) % CAMERA_MODES.length]); return this.mode; }
+  recenter(heading) {
+    this.yaw = heading + Math.PI; this.pitch = cameraPreset(this.mode).pitch;
+    this.manualLook = false; this.lookIdle = 0;
+  }
   input(dx, dy, wheel) {
-    if (dx || dy) this.lookIdle = 0;
+    if (dx || dy) { this.lookIdle = 0; this.manualLook = true; }
     this.yaw -= dx * 0.0032;
     const preset = cameraPreset(this.mode);
     this.pitch = clamp(this.pitch + dy * 0.0026, preset.minPitch, preset.maxPitch);
@@ -42,7 +47,7 @@ export class OrbitCam {
       return;
     }
     this.lookIdle += dt;
-    if (this.mode === 'third' && this.lookIdle > 1.5 && follow.moving && Number.isFinite(follow.heading)) this.yaw = dampAngle(this.yaw, follow.heading + Math.PI, 2, dt);
+    if (this.mode === 'third' && !this.manualLook && this.lookIdle > 1.5 && follow.moving && Number.isFinite(follow.heading)) this.yaw = dampAngle(this.yaw, follow.heading + Math.PI, 2, dt);
     this.target.set(focus.x, damp(this.target.y || focus.y + height * 0.86, focus.y + height * 0.86, 12, dt), focus.z);
     const t = this.target;
     const cp = Math.cos(this.pitch);
@@ -66,14 +71,16 @@ export class OrbitCam {
     this.cur = d < this.cur ? d : damp(this.cur, d, 4, dt);
     const p = t.clone().addScaledVector(dir, this.cur);
     const g = heightAt(p.x, p.z) + 0.45;
-    if (p.y < g) p.y = g;
+    // Lift the eye and its aim together: ground protection must not flatten look-up.
+    const groundLift = Math.max(0, g - p.y);
+    if (groundLift) p.y += groundLift;
     if (this.shake > 0) {
       this.shake = Math.max(0, this.shake - dt * 3);
       p.x += (Math.random() - 0.5) * this.shake * 0.25;
       p.y += (Math.random() - 0.5) * this.shake * 0.25;
     }
     this.cam.position.copy(p);
-    this.cam.lookAt(t);
+    this.cam.lookAt(groundLift ? t.clone().setY(t.y + groundLift) : t);
   }
   // world-space forward/right on the ground for movement input
   basis() {

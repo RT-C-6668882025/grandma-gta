@@ -1,233 +1,128 @@
 <div align="center">
 
-# 老奶奶 GTA · 阿嬤俠盜：田庄大亂鬥
+# 阿嬤俠盜 · Android 魔改版
 
-**一个在浏览器里就能玩的台湾乡村开放世界。主角是 72 岁的秀琴阿嬤。**
-广场舞斗舞、蓝白拖连击、抢车、被警察追、抓大鹅……全部由 AI 工具链制作：
-**Tripo** 做 3D 角色与动作，**Claude Code** 写游戏，**Three.js** 渲染。
+**72 岁阿嬤的开放世界，现在能装进安卓手机和平板。**
 
-**[🎮 在线试玩](https://andyhuo520.github.io/grandma-gta/)** · [English](README.en.md) · [▶ 观看预告片](https://github.com/andyhuo520/grandma-gta/releases/tag/v1.0.0) · [快速开始](#快速开始) · [制作工作流](#制作工作流)
+离线 APK · 触屏与外接键鼠 · 三种视角 · 无敌与飞行
 
-![Three.js](https://img.shields.io/badge/Three.js-r180-black?logo=three.js)
-![No build](https://img.shields.io/badge/build-none-brightgreen)
-![Tripo](https://img.shields.io/badge/3D-Tripo%20Studio-7b5cff)
-![Claude Code](https://img.shields.io/badge/code-Claude%20Code-d97757)
-![License](https://img.shields.io/badge/license-MIT-blue)
+[下载最新版 APK](https://github.com/RT-C-6668882025/grandma-gta/releases/latest) · [所有版本](https://github.com/RT-C-6668882025/grandma-gta/releases) · [原项目](https://github.com/andyhuo520/grandma-gta)
 
-<a href="https://github.com/andyhuo520/grandma-gta/releases/tag/v1.0.0">
-  <img src="docs/media/hero-skill-cards.gif" width="800" alt="预告片开场：广场舞、扇巴掌、抢车、快跑、秀琴阿嬤五张技能卡">
-</a>
-
-<sub>预告片开场（静音预览）。完整 1 分 47 秒 2K60 预告片在 <a href="https://github.com/andyhuo520/grandma-gta/releases/tag/v1.0.0">Releases</a>。</sub>
+![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)
+![Three.js](https://img.shields.io/badge/Three.js-WebGL-black?logo=three.js)
+![License](https://img.shields.io/badge/License-MIT-blue)
 
 </div>
 
----
+这是基于 [andyhuo520/grandma-gta](https://github.com/andyhuo520/grandma-gta) 的魔改分支，由 [RT-C-6668882025](https://github.com/RT-C-6668882025) 维护。保留原作的小镇、任务、角色、交通、商店和配音，主要改造安卓运行、操作体验与自由游玩能力。
 
-## 玩法
+## 本分支改了什么
 
-番薯寮是一个虚构的台湾中南部小镇：妈祖庙口广场、传统市场、骑楼老街、三合院、稻田和铁皮仓库。你扮演秀琴阿嬤，在小镇里做任务、打坏人、抢车，还有一段黄昏恋。
+| 功能 | 当前实现 |
+| --- | --- |
+| Android App | 游戏与模型打包进 APK；离线启动，横屏与沉浸式全屏 |
+| 平板操作 | 左侧摇杆移动，滑动画面转视角，右侧动作按钮；支持蓝牙键盘、鼠标与触屏同时使用 |
+| 第三人称 | 默认近距离跟随；上下车分别使用合适距离；手动转向后保持视角，按 Z 回正 |
+| 第一人称 | 从人物视线观察，隐藏自身模型，避免遮挡 |
+| 上帝视角 | 从高处俯看小镇，可旋转和调整距离 |
+| 自由转向 | 鼠标两路事件兼容与去重；未锁定时停在画面边缘持续转向，移回中央停止 |
+| 无敌 | 玩家无限生命与体力，保护当前驾驶车辆 |
+| 无限钱 | 默认保持充足余额，购买物品不扣钱 |
+| 超速 | 步行与驾驶可选 2 / 4 / 8 倍速度，仅作用于玩家 |
+| 飞行 | 可开关，自由升降；触屏也有对应按钮 |
+| 画质与加载 | 低 / 中 / 高画质；网页模型 gzip 打包与缓存，APK 直接读取本地模型 |
 
-<table>
-<tr>
-<td width="33%"><img src="docs/media/play-dance.gif" alt="广场舞"><br><b>广场舞 · 被动技能</b><br>节奏小游戏，箭头落到白线时按方向键。拿下冠军才能抢到广场时段。</td>
-<td width="33%"><img src="docs/media/play-slipper.gif" alt="扇巴掌"><br><b>扇巴掌 · 近战技能</b><br>拳、踢、挥棍、丢蓝白拖。被打倒的人头上冒星星，不见血。</td>
-<td width="33%"><img src="docs/media/play-carjack.gif" alt="抢车"><br><b>抢车 · 特殊玩法</b><br>按 F 把司机拉下车。三轮车、机车、老轿车、发财车、小黄都能开。</td>
-</tr>
-<tr>
-<td><img src="docs/media/play-police.gif" alt="快跑"><br><b>快跑 · 逃脱玩法</b><br>闹事会涨「八卦值」（1–5 个大声公），老警察会骑车来追。去庙里拜拜可以清八卦值。</td>
-<td><img src="docs/media/play-ride.gif" alt="骑车"><br><b>骑车兜风</b><br>电动三轮车带 4 个电台：台语老歌、电子花车、地下电台卖药、那卡西。</td>
-<td><img src="docs/media/play-geese.gif" alt="抓大鹅"><br><b>抓大鹅 · 支线</b><br>75 秒内把 6 只逃跑的大鹅扑回鹅寮。大鹅会散步、啄食、逃跑、起飞，还会反咬你。</td>
-</tr>
-</table>
+无敌、无限钱和 4 倍速度默认开启；飞行默认关闭。点「能力」可分别切换，视角和能力偏好会保存在当前设备。
 
-**内容一览**
+## 下载与安装
 
-- **主线两章，共 13 关**
-  - 第一章：生日的早晨 → 送报纸 → 柑仔店的礼物 → 菜市场保护费 → 追存折飞车战 → 阿嬤开小黄 → 广场舞大赛。
-  - 第二章「金牙伯的挑战」：卡拉 OK 对唱、跟踪、直捣诈骗窝、台风夜求婚。
-- **支线**：计程车载客、捡纸箱回收、采高丽菜卖、刮刮乐、拜土地公、抓大鹅。
-- **城镇系统**：交通 AI 会停红灯；NPC 执法；昼夜与天气；商店与经济系统；换装（花布衫可以换成豹纹、迷彩、金亮片）；「痞度」会影响物价和路人的态度。
-- **配音**：12 种角色音色，共 110 句台湾腔对白。
+打开 [Releases](https://github.com/RT-C-6668882025/grandma-gta/releases/latest)，下载其中的 **grandma-gta-god.apk**。
 
-## 快速开始
+- Android 8.0 及以上；系统 Android WebView 需支持 WebGL、ES Modules 与 import maps。
+- 游戏资源包含在安装包内，游玩无需联网下载模型。
+- 当前 APK 使用个人测试签名，不同云构建的签名可能不同。无法覆盖安装时，需先卸载旧版；卸载会清除本地存档与设置。
+- 已完成自动测试、APK 构建与签名校验；不同设备的帧率、键鼠捕获及完整任务流程仍需真机验证。
 
-直接打开 **https://andyhuo520.github.io/grandma-gta/** 就能玩（首次加载约 80 MB 模型，推荐用电脑上的 Chrome）。
+## 怎么玩
 
-想在本地运行的话，不用安装依赖，也不用构建，只要有 Python 3 和一个现代浏览器：
+### 触屏
+
+横屏打开：左下摇杆移动，拖动画面转视角，右下按钮执行动作。顶部可打开背包、手机、地图与暂停；「视角」按钮切换镜头，「能力」按钮切换魔改能力。
+
+使用外接键鼠时，可点「触控：关」隐藏触屏操作区。
+
+### 键鼠
+
+| 操作 | 按键 |
+| --- | --- |
+| 移动 / 奔跑 | WASD / Shift |
+| 转动视角 | 移动鼠标；自由鼠标模式下，停在画面边缘可持续转向 |
+| 鼠标模式 | 画面上的「滑鼠」按钮：移动与边缘转向 / 右键拖曳 / 锁定视角 |
+| 切换镜头 / 回正 | C / Z |
+| 镜头距离 | 滚轮；第三人称调距离，上帝视角调观察距离 |
+| 能力菜单 / 飞行开关 | O / V |
+| 飞行上升 / 下降 | PageUp / PageDown |
+| 攻击 / 投掷 | 左键或 J / G |
+| 互动 / 上下车与抢车 | E / F |
+| 驾驶 | W / S 油门与倒车，A / D 转向，空格刹车与喇叭 |
+| 电台 / 痞步 | R / Q |
+| 补药 / 抽烟 / 槟榔 | H / X / B |
+| 背包 / 手机 / 地图 | Tab / T / M |
+| 暂停与返回 | Esc |
+
+浏览器能否锁定鼠标、进入真全屏，由浏览器与嵌入页面权限决定。锁定不可用时，移动与边缘转向仍可使用。
+
+## 自己魔改
+
+网页部分不需要安装 npm 依赖，使用静态服务器即可运行：
 
 ```bash
-git clone https://github.com/andyhuo520/grandma-gta.git
+git clone https://github.com/RT-C-6668882025/grandma-gta.git
 cd grandma-gta
-python3 tools/serve.py        # http://localhost:8965
+python3 tools/serve.py
 ```
 
-用 Chrome、Edge 或 Safari 打开 `http://localhost:8965`。`serve.py` 只是一个禁用缓存的静态服务器，改完代码刷新页面就生效。
+在浏览器打开 `http://localhost:8965`，修改代码后刷新。
 
-| URL 参数 | 作用 |
-|---|---|
-| `?nostory` | 自由模式，不自动开始主线 |
-| `?story=N` | 从第 N 关开始 |
-| `?rich` | 开局给 NT$20,000 |
+| 想改什么 | 文件 |
+| --- | --- |
+| 默认能力、无限钱余额、飞行范围 | `src/mods.js` |
+| 三种镜头的距离与俯仰范围 | `src/camera-modes.js`、`src/camera.js` |
+| 鼠标输入、边缘转向速度 | `src/input.js` |
+| 触屏按钮 | `src/touch.js`、`src/ui.css` |
+| 玩家、NPC 与战斗 | `src/entities.js` |
+| 车辆与交通 | `src/vehicles.js` |
+| 任务与对话 | `src/story.js`、`src/chapter2.js` |
+| Android 外壳与打包 | `android/`、`.github/workflows/android-apk.yml` |
+
+运行测试：
+
+```bash
+node --test tests/*.test.mjs
+```
+
+网页模型打包：
+
+```bash
+python3 tools/pack-models.py
+```
+
+Android 构建需要 Java 17、Android SDK Platform 35 和 Build Tools 35.0.0：
+
+```bash
+bash android/build.sh
+```
+
+输出：`android/build/grandma-gta-god.apk`。GitHub Actions 也会为游戏与安卓代码变更构建 APK；更多说明见 [Android 构建说明](android/README.md)。
+
+| URL 参数 | 用途 |
+| --- | --- |
+| `?nostory` | 不自动开始主线，自由游玩 |
+| `?story=N` | 从指定关卡开始 |
 | `?autostart` | 跳过标题画面 |
 
-**操作**
+## 原作与致谢
 
-| | 按键 |
-|---|---|
-| 走路 | `WASD` 移动 · `Shift` 跑 · `Q` 痞步 · `E` 互动 · `空格` 骂人 |
-| 战斗 | `左键`/`J` 打人 · `G` 丢蓝白拖 · `X` 抽烟 · `H` 喝补药 · `B` 嚼槟榔 |
-| 车辆 | `F` 上车/抢车/下车 · `W/S` 油门/倒车 · `A/D` 转向 · `空格` 刹车/喇叭 · `R` 换电台 |
-| 界面 | `Tab` 背包 · `T` 老人机（任务菜单）· `M` 地图 · `1-9` 选对话 · `Esc` 暂停 |
+原作的台湾乡村地图、阿嬤角色、主线与支线、广场舞、抢车、NPC 执法等内容来自 [andyhuo520/grandma-gta](https://github.com/andyhuo520/grandma-gta)。原作使用 Three.js 渲染、Tripo 生成模型、MiMo TTS 生成配音；原作制作流程见其 [README](https://github.com/andyhuo520/grandma-gta#readme)。
 
-> 广场舞原曲受版权保护，仓库里没有附带。没有原曲时，游戏会现场合成一段同 BPM（127）的五声音阶广场舞循环，节奏游戏照样能玩。如果你有合法音源，把副歌放到 `assets/music/square-dance-chorus.mp3` 即可替换。
-
-## 制作工作流
-
-整个项目由一个人加几个 AI 工具完成。三条主线是：**Tripo 出资产 → Claude Code 写游戏并自动测试 → 逐帧录制并剪成预告片**。
-
-```mermaid
-flowchart LR
-  subgraph A["① 3D 资产 · Tripo Studio"]
-    A1["文生图 / T-pose 设定图"] --> A2["图生 3D<br/>Smart Mesh P2.0 四边面"]
-    A2 --> A3["纹理生成 → 重拓扑"]
-    A3 --> A4["Mixamo 自动绑骨"]
-    A4 --> A5["预设动作 + Text-to-Motion"]
-    A5 --> A6["导出 GLB"]
-  end
-  subgraph B["② 资产处理"]
-    B1["Blender 无头减面<br/>tools/decimate.py"] --> B2["贴图压缩<br/>tools/glb-shrink.py"]
-  end
-  subgraph C["③ 游戏 · Claude Code + Three.js"]
-    C1["角色/动作系统<br/>IK 骑车握把"] --> C2["任务脚本<br/>NPC / 交通 / 执法"]
-    C2 --> C3["无头测试<br/>tools/play.py + __ama API"]
-  end
-  subgraph D["④ 宣传片"]
-    D1["逐帧录制<br/>tools/rec.py → ffmpeg"] --> D2["Remotion 剪辑<br/>技能卡花字 / 音效"]
-  end
-  A6 --> B1
-  B2 --> C1
-  C3 --> D1
-  V["MiMo TTS<br/>110 句配音"] --> C2
-```
-
-### ① 用 Tripo Studio 做角色、动物、道具和动作
-
-主要角色全部在 **Tripo Studio 3D 工作台**里完成，每一步都有录屏，同时可以直接当宣传素材：
-
-| 步骤 | Tripo 功能 | 录屏 |
-|---|---|---|
-| 设定图 | 图片生成：T-pose 模板 + 角色描述（72 岁、花布衫、斗笠、红雨鞋……） | <img src="docs/media/tripo-text-to-3d.gif" width="360"> |
-| 建模 | 一键转 3D，**Smart Mesh P2.0** 原生四边面，一次生成 4 档面数（约 2k–23k） | <img src="docs/media/tripo-image-to-3d.gif" width="360"> |
-| 贴图与绑骨 | 纹理生成 → 重拓扑（三角面）→ **Mixamo 自动绑骨**，一套骨骼所有角色通用 | <img src="docs/media/tripo-texture-rig.gif" width="360"> |
-| 动作 | 22–25 个预设动作（走、跑、拳、踢、挥棍、跳舞、讲电话……）+ **Text-to-Motion** 多段串接，如金牙伯的「炫富大笑」 | <img src="docs/media/tripo-text-to-motion.gif" width="360"> <img src="docs/media/tripo-anim-presets.gif" width="360"> |
-| 批量导出 | GLB 导出（全选动作）；大鹅、水牛、榕树、骑楼道具用文生 3D | |
-
-导出的 GLB 在游戏里做了几种展示，代码在 `tools/showcase.html`：
-
-<table><tr>
-<td><img src="docs/media/tech-texture-wipe.gif" width="260"><br>白模 → 贴图扫描</td>
-<td><img src="docs/media/tech-skeleton.gif" width="260"><br>Mixamo 骨骼可视化</td>
-<td><img src="docs/media/tech-lineup.gif" width="260"><br>同一套骨骼、同一个动作</td>
-</tr></table>
-
-### ② 资产处理
-
-- 文生 3D 的模型高达约 200 万三角面，用 **Blender 5 无头模式**减面：`tools/decimate.py` / `tools/decimate-all.sh`。
-- `tools/glb-shrink.py` 把贴图缩到 512–2048，GLB 体积压到几 MB。
-- `tools/glbinfo.py` 列出骨骼、动作名和面数。Studio 重复导出时动作名会带 `.001` 后缀，加载器会自动去掉。
-- 部分道具和早期 NPC 是用 Combos CLI 批量调用 Tripo 生成的：`tools/fetch-assets.sh`。
-
-### ③ 用 Claude Code 写游戏
-
-全部游戏代码（约 8,000 行 ES Module）都是 **Claude Code** 在对话里写出来的，不依赖构建工具或游戏引擎，只用 Three.js r180 + importmap。几个值得一看的实现：
-
-| 模块 | 做法 |
-|---|---|
-| `src/actor.js` | 与骨骼体系无关的动画层（Mixamo / Tripo 41 骨通用）。自动找出出拳的命中帧（手或脚离髋部最远的那一帧）；两骨 IK 实现抽烟和握龙头；`leanToBars` 让身体前倾、锁骨前伸，`gripHand` 让手掌朝下、手指弯曲，所以 0.41 m 的短手臂也能握到车把。 |
-| `src/goose.js` | 大鹅模型本身是静态网格，在 `onBeforeCompile` 里注入顶点着色器，让脖子弯曲、腿摆动、起飞时收脚；两片程序化翅膀负责扑翅。状态机：散步 / 啄食 / 鸣叫 / 之字形逃跑 / 起飞 / 冲撞 / 晕眩。 |
-| `src/entities.js` | 倒地的身体每帧对墙体做 `resolve()`，防止被打飞后穿进墙里。阿嬤扑鹅用原地版动作（`dive_ip`），身体按实测的 `DIVE_CURVE` 位移。 |
-| `src/law.js` | NPC 执法：警察抓的是真正动手的人，不看谁长得像流氓；路人自卫不算犯法；过场动画期间休战；增援会锁定目标。有 14 个单元测试。 |
-| `src/buffalo-*.js` | 水牛的步态由实际走过的距离驱动；30 / 60 fps 下走出的路径一致（有测试）。 |
-| `src/world/` | 小镇完全程序化生成：骑楼、马赛克磁砖、铁窗、招牌图集、红绿灯、稻田水面。 |
-| `src/audio.js` | WebAudio 合成音效和 4 个电台；没有原曲时生成广场舞音乐。 |
-
-**测试与调试**：页面暴露一个调试 API `window.__ama`，提供 `start / tp / run / shoot / enter / story()` 等方法。`tools/play.py` 用 Playwright 无头 Chromium 跑步骤脚本（`waitjs / js / wait / shot`），每一关都能自动从头打到尾。单元测试：
-
-```bash
-node --test tests/*.test.mjs   # 20 个测试：NPC 执法 + 水牛移动
-```
-
-### ④ 预告片是怎么做的
-
-- **录制游戏画面**：`tools/rec.py` 冻结游戏时钟，一帧一帧推进并截图，帧数据直接通过管道交给 ffmpeg，所以 60 fps 不掉帧，跟机器性能无关。
-- **录制 Tripo 界面**：用 Screen Studio 录 Tripo Studio 的操作。
-- **剪辑**：Remotion（React 写视频）。开场用了 GTA 风格的半屏「技能卡」（标签 / 大标题 / 类别 / 一句描述 / 能力条），按音乐每 3 拍切一次；任务成功和失败用 MISSION PASSED / WASTED 全屏卡；对白做成漫画气泡。口播底片由 Codex 制作，Claude Code 在上面叠加花字层和音效层。
-- **配音**：小米 MiMo TTS（voice design）为 12 个角色生成 110 句对白，脚本是 `assets/voice/gen_lines.py`，台词在 `assets/voice/lines.json`。
-
-## 用到的工具
-
-| 工具 | 用途 |
-|---|---|
-| [Tripo Studio](https://www.tripo3d.ai) | 角色、动物、道具建模；Smart Mesh P2.0、纹理、重拓扑、自动绑骨、预设动作、Text-to-Motion |
-| [Claude Code](https://claude.com/claude-code) | 编写全部游戏代码、工具脚本和测试；通过 Claude in Chrome 操作 Tripo Studio |
-| [Three.js](https://threejs.org) r180 | WebGL 渲染、骨骼动画、后期处理 |
-| [Blender](https://www.blender.org) 5 | 无头批量减面 |
-| [Playwright](https://playwright.dev) | 无头测试、逐帧录制 |
-| [Remotion](https://www.remotion.dev) + [FFmpeg](https://ffmpeg.org) | 预告片剪辑、混音、响度标准化（−14 LUFS） |
-| Xiaomi MiMo TTS | 角色配音 |
-| Combos CLI | 早期部分道具的批量生成 |
-
-## 目录结构
-
-```
-index.html            入口（importmap → vendor/three）
-src/
-  main.js             启动、渲染循环、输入、暂停菜单
-  game.js  story.js   存档、任务系统；第一章主线与支线
-  chapter2.js         第二章「金牙伯的挑战」
-  actor.js            动画层、IK、骑车/坐姿
-  entities.js         玩家、NPC、动物、战斗、碰撞
-  vehicles.js         载具、交通 AI、电台
-  goose.js            大鹅表演与抓大鹅小游戏
-  law.js              八卦值与 NPC 执法
-  world/              程序化小镇、天空、地形、街道家具
-  audio.js fx.js ui.js weather.js grass.js birds.js …
-assets/
-  chars/ animals/ props/ gear/ nature/   Tripo 生成的 GLB（已减面、压贴图）
-  voice/                                 MiMo 配音和生成脚本
-tools/                serve / play / rec / decimate / glb-shrink / showcase …
-tests/                node:test 单元测试
-docs/media/           README 用到的动图
-```
-
-## 素材与授权
-
-- **源代码**：[MIT](LICENSE)。
-- **3D 模型**（`assets/**/*.glb`）：由 Tripo 生成，随仓库提供，供学习和演示使用。如果要商用，请先确认 [Tripo 服务条款](https://www.tripo3d.ai)。
-- **配音**（`assets/voice/l/`）：由小米 MiMo TTS 生成。
-- **音乐**：仓库里没有附带受版权保护的歌曲，详见上文「快速开始」。
-- 游戏里的店名和品牌都是虚构或谐音。
-
----
-
-<div align="center">
-
-觉得阿嬤可爱的话，给个 ⭐ 吧。想自己做一个？先去 [Tripo](https://www.tripo3d.ai) 生成你的第一个角色。
-
-</div>
-
-
-## Android 平板适配（浏览器版）
-
-本分支保留原版地图、任务、模型和游戏规则，扩展触屏与外接键鼠输入。
-
-- Android Chrome 横屏打开；首次仍需加载原版资源。
-- 左下摇杆移动，滑动画面转视角，右下按钮攻击、互动、上下车、奔跑等。
-- 顶部可打开背包、手机、地图、暂停 / 返回；跳舞时显示方向按钮。
-- 触屏与键盘可同时使用；只用键鼠时可点“触控：关”隐藏下方按钮。
-- 鼠标锁定失败或不可用时：左键攻击，按住右键拖动转视角。
-- 暂停菜单提供低 / 中 / 高画质并记住选择；平板默认中画质，低 / 中关闭阴影，自动分辨率不超过所选档位。
-- 全屏按钮会尝试横屏锁定，不支持时手动旋转平板。
-
-验证：`node --test tests/*.test.mjs`。Android 蓝牙键鼠、GPU 帧率及完整任务流程仍需真机验收；当前不提供 APK。
+代码沿用 [MIT 许可证](LICENSE)。模型与配音沿用原项目的素材和授权说明。仓库不附带受版权保护的广场舞原曲，缺少原曲时使用游戏内合成音乐。

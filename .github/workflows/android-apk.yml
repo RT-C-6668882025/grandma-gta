@@ -28,15 +28,15 @@ jobs:
           name: grandma-gta-god-apk
           path: android/build/grandma-gta-god.apk
           retention-days: 30
-      - name: Publish mouse fix
+      - name: Publish free-look edition
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v1.1.1-mouse >/dev/null 2>&1; then exit 0; fi
+          if gh release view v1.2.0-free-look >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
-          修复 Android WebView 只发送 mousemove 时无法转动视角的问题。
-          兼容 Pointer Events 和鼠标事件并去重；鼠标锁定失败仍能移动转向。保留三种视角和无敌能力。
+          鼠标停在画面边缘持续转向，可水平连续旋转；移回中央停止。扩大三种镜头的俯仰范围。
+          手动转向后不自动回正，Z 或触屏「视角回正」恢复跟随。保留三种视角和全部无敌能力，README 已改为本魔改分支说明。
           构建和签名校验通过，尚未完成真机验证。个人测试签名与旧版不同，已安装旧版时需要卸载后安装，本地存档会清除。
           NOTES
-          gh release create v1.1.1-mouse android/build/grandma-gta-god.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 鼠标修复版 1.1.1' --notes-file notes.md
+          gh release create v1.2.0-free-look android/build/grandma-gta-god.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 自由视角版 1.2' --notes-file notes.md

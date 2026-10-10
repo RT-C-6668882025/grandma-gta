@@ -18,7 +18,7 @@ import { WX, STATES, tickWeather, setWeather, buildRain, onThunderCb } from './w
 import { initFx, tickFx, fx, addEmitter } from './fx.js';
 import { buildGrass } from './grass.js';
 import { buildBirds } from './birds.js';
-import { initInput, keys, mouse, hit, down, endFrame, setUiBlocking, unlock } from './input.js';
+import { initInput, keys, mouse, hit, down, endFrame, setUiBlocking, unlock, pollMouseLook } from './input.js';
 import { initDisplay } from './display.js';
 import { initTouch } from './touch.js';
 import { OrbitCam } from './camera.js';
@@ -328,7 +328,11 @@ function step(d) {
   else if (ui.open === 'panel' && hit('Tab', 'KeyI')) ui.close();
   const playing = !ui.open && !locked && !player.down;
   if (playing && hit('KeyC')) switchCamera();
-  if (!ui.open) orbit.input(mouse.dx, mouse.dy, mouse.wheel);
+  if (!ui.open && !locked) {
+    pollMouseLook(d);
+    orbit.input(mouse.dx, mouse.dy, mouse.wheel);
+    if (playing && hit('KeyZ')) orbit.recenter(player.veh ? player.veh.heading : player.heading);
+  }
   const { f, r } = orbit.basis();
   const fw = playing ? (down('KeyW', 'ArrowUp') ? 1 : 0) - (down('KeyS', 'ArrowDown') ? 1 : 0) : 0;
   const rt = playing ? (down('KeyD', 'ArrowRight') ? 1 : 0) - (down('KeyA', 'ArrowLeft') ? 1 : 0) : 0;
@@ -500,7 +504,7 @@ function openPowers() {
 document.getElementById('powersButton').onclick = () => { if (mode === 'play') { if (ui.open) ui.close(); else openPowers(); } };
 function pauseHtml() {
   return `<div class="note" style="font-size:14px;line-height:1.9">
-    <b>視角</b>：C / 畫面上的視角按鈕切換第三人稱、第一人稱、上帝視角；滾輪調整第三人稱距離或上帝視角高度。<br>
+    <b>視角</b>：C / 視角按鈕切換三種視角；Z 回正；滾輪調整距離。移動轉視角模式下，把滑鼠停在畫面邊緣會持續轉向，移回中央停止。<br>
     <b>走路</b>：WASD 移動 · Shift 跑 · Q 痞步 · 左鍵/J 打人 · G 丟藍白拖 · X 抽菸 · H 喝補藥 · B 嚼檳榔 · 空白鍵 罵人 · E 互動<br>
     <b>車輛</b>：F 上車/搶車/下車 · W/S 油門倒車 · A/D 轉向 · 空白鍵 剎車/喇叭 · R 換電台<br>
     <b>介面</b>：Tab 背包 · T 老人機 · M 地圖 · 1-9 選對話 · Esc 暫停</div>
