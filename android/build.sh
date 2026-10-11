@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+test -n "${ANDROID_SIGNING_FILE:-}" && test -f "$ANDROID_SIGNING_FILE" || {
+  echo 'Fixed signing configuration required: set ANDROID_SIGNING_FILE. Refusing to generate a replacement key.' >&2
+  exit 1
+}
 task_sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
 test -n "$task_sdk" || { echo 'Android SDK is required'; exit 1; }
 task_tools="$task_sdk/build-tools/35.0.0"
@@ -17,9 +21,7 @@ jar cf android/build/classes.jar -C android/build/classes .
 "$task_tools/aapt2" link -o android/build/unsigned.apk -I "$task_jar" --manifest android/AndroidManifest.xml -A android/build/assets
 (cd android/build/dex && zip -q -u ../unsigned.apk classes.dex)
 "$task_tools/zipalign" -f 4 android/build/unsigned.apk android/build/aligned.apk
-if [ ! -f android/build/test-key.jks ]; then
-  keytool -genkeypair -keystore android/build/test-key.jks -storepass android -keypass android -alias personal-test -dname 'CN=Grandma GTA Personal Test' -keyalg RSA -keysize 2048 -validity 10000 >/dev/null 2>&1
-fi
-"$task_tools/apksigner" sign --ks android/build/test-key.jks --ks-pass pass:android --key-pass pass:android --out android/build/grandma-gta-phone-tablet.apk android/build/aligned.apk
-"$task_tools/apksigner" verify android/build/grandma-gta-phone-tablet.apk
-printf 'Built android/build/grandma-gta-phone-tablet.apk\n'
+python3 android/sign-apk.py "$ANDROID_SIGNING_FILE" "$task_tools" android/build/aligned.apk android/build/grandma-gta-phone-tablet.apk
+"$task_tools/zipalign" -c -P 16 4 android/build/grandma-gta-phone-tablet.apk
+"$task_tools/aapt2" dump badging android/build/grandma-gta-phone-tablet.apk >/dev/null
+printf 'Built android/build/grandma-gta-phone-tablet.apk with fixed signing identity\n'

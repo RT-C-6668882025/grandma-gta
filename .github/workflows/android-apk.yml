@@ -2,7 +2,7 @@ name: Android APK
 on:
   push:
     branches: [main]
-    paths: ['android/**', 'src/**', 'index.html', '.github/workflows/android-apk.yml']
+    paths: ['android/**', 'src/**', 'index.html', '.github/workflows/android-apk.yml', 'tests/**']
   workflow_dispatch:
 permissions:
   contents: write
@@ -11,6 +11,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Restore fixed signing configuration
+        env:
+          ANDROID_SIGNING: ${{ secrets.ANDROID_SIGNING }}
+        run: |
+          python3 - <<'PYTHON'
+          import os, pathlib, sys
+          value = os.environ.get('ANDROID_SIGNING', '')
+          if not value:
+              sys.exit('Missing repository secret ANDROID_SIGNING. Publication stopped; no random signing key will be generated.')
+          path = pathlib.Path(os.environ['RUNNER_TEMP']) / 'android-signing.json'
+          path.write_text(value)
+          path.chmod(0o600)
+          with open(os.environ['GITHUB_ENV'], 'a') as f:
+              f.write('ANDROID_SIGNING_FILE=' + str(path) + '\n')
+          PYTHON
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -30,20 +45,23 @@ jobs:
           name: grandma-gta-phone-tablet-apk
           path: android/build/grandma-gta-phone-tablet.apk
           retention-days: 30
+      - name: Remove private signing configuration
+        if: always()
+        run: rm -f "$RUNNER_TEMP/android-signing.json"
       - name: Publish world economy edition
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v1.13.0-controls >/dev/null 2>&1; then exit 0; fi
+          if gh release view v1.13.1-stable >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
           手机 / 平板通用版 · Android 8.0+。
           修复动作淡出期间接新动作导致旧动画残留、姿势叠加的问题；脚步声改按实际地面位移触发。
           触控：左下浮动摇杆、前推外圈冲刺、右侧拇指动作区；攻击键可长按连击并拖动视角，多指互不抢占。
           灵敏度与按键大小可调整并保存；上车自动切换下车、刹车与任务投掷按钮。
           键鼠：WASD + Shift，左键长按攻击，右键轻点投掷 / 拖动视角，E 互动 / 上下车；旧快捷键继续可用。
-          121 项自动测试通过；真实模型动作切换、多指触控、三种屏幕尺寸及整局 E 键上下车检查通过。手机 / 平板手感仍需真机体验。
+          123 项自动测试通过；真实模型动作切换、多指触控、三种屏幕尺寸及整局 E 键上下车检查通过。手机 / 平板手感仍需真机体验。
           README 已更新，「日志」名称不变。
-          个人测试签名可能与旧版不同，卸载会清除存档。
+          独立包名，可与 1.12 / 1.13 并存，不用卸载旧版；新旧存档独立。后续稳定版固定签名，缺少签名配置时禁止发布。
           NOTES
-          gh release create v1.13.0-controls android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 手机 / 平板通用版 1.13 · 动作修复与触控' --notes-file notes.md
+          gh release create v1.13.1-stable android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 手机 / 平板通用版 1.13.1 · 固定签名稳定版' --notes-file notes.md

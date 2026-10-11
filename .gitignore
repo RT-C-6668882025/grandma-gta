@@ -26,3 +26,10 @@ shots/
 构思与技术分析.md
 
 android/build/
+
+# Private Android signing material must never enter the repository
+*.jks
+*.keystore
+*.p12
+android-signing.json
+grandma-gta-signing-secret.txt

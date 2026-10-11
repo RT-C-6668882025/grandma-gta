@@ -18,14 +18,14 @@ Android 手机 / 平板 · 开放世界 · NT$ / GOD 双货币 · 实时经济 �
 
 ## 下载与安装
 
-**当前版本：1.13 · 动作修复与触控**
+**当前源码：1.13.1 · 固定签名稳定版；GitHub 自动发布等待一次性签名配置。**
 
-[直接下载手机 / 平板通用 APK（约 57 MB）](https://github.com/RT-C-6668882025/grandma-gta/releases/download/v1.13.0-controls/grandma-gta-phone-tablet.apk) · [发布说明](https://github.com/RT-C-6668882025/grandma-gta/releases/tag/v1.13.0-controls)
+1.12 → 1.13 的覆盖安装失败已确定是旧构建每次生成不同签名所致。1.13.1 使用独立包名和固定签名，可与旧版并存；不要为了安装新版先卸载旧版。**新旧应用存档独立，不自动迁移。**
 
-- Android 8.0 及以上，系统 WebView 需支持 WebGL、ES Modules 和 import maps。
-- 同一个安装包适配手机和平板。游戏与模型包含在 APK 内，支持离线游玩。
-- 当前使用个人测试签名，不同构建可能无法覆盖安装。**卸载会清除本地存档与设置**，不要把卸载当作无损更新。
-- 1.13 已通过 121 项自动测试、浏览器多指操作检查及 APK 构建；不同设备的帧率、触控手感与完整任务流程仍需真机验证。
+- Android 8.0+，系统 WebView 需支持 WebGL、ES Modules 和 import maps。
+- 游戏与模型包含在 APK 内，支持离线游玩。
+- 自动构建必须设置私有 `ANDROID_SIGNING` Secret，参见 [签名配置](android/README.md)。缺少密钥或证书不匹配时停止发布。
+- 1.13 的 121 项功能测试通过；本轮另加签名缺失与无效配置的阻断测试。修复版仍需真机安装确认。
 
 ## 1.13：动作修复与触控
 
