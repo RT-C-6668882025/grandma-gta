@@ -1,3 +1,4 @@
+import {dressDistrictCenters} from './world/urban-dressing.js';
 import {districtDestinations} from './world/urban-plan.js';
 import {createCombatDemo} from './combat-demo.js';
 import {regionAt,regionMarkers} from './city-regions.js';
@@ -106,6 +107,7 @@ async function boot() {
   loadmsg.textContent = '正在叫醒番薯寮的阿公阿嬤……';
   await assets;
   await dressTown(scene);
+  await dressDistrictCenters(scene);
   initFx(scene, renderer);
   rain = buildRain(scene);
   grass = buildGrass(scene, scene.getObjectByName('terrain').material.map);

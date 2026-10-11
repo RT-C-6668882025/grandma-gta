@@ -53,14 +53,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v1.19-centers >/dev/null 2>&1; then exit 0; fi
+          if gh release view v1.20-assets >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
           手机 / 平板通用版 · Android 8.0+，固定签名，可覆盖安装稳定版。
-          新增三个公共中心：东埠样机集市、榆庭公庭、澄湾开放园，分别布置样机摊位、喷泉与露台、光伏廊架与展示装置。
-          地图新增公共空间分类，支持搜索、导航、瞬移，目的地介绍保留在选中提示中。
-          街坊路网连上原道路；避开旧设施，移除新步道交叉口的自动电线杆，改用专门布置的街坊路灯。
-          公共中心加入座椅和居民活动点；原街坊数量、三区面积比例、地块账户和农业生产规则保持兼容。
-          163 项自动测试通过；浏览器验证三个中心的路线碰撞、入口、地图搜索和瞬移。
-          公共中心为程序场景首版；样机展示、咖啡露台和展示装置目前是环境设施，未增加购买或科技研发玩法。实机性能仍需验证。
+          人物和道具沿用原作者的 Tripo/GLB/骨骼动画流程，缺少正式资源时延期。
+          据点守卫替换为原作 thug2 人物，复用 Actor 的移动、受击、倒地与动作混合；退出时避免释放共享模型几何和贴图。
+          新区建筑改用原作者 shophouse 生成器，中心周边立面朝向公共空间；复用建筑时不重复建立产业账户。
+          中心道具接入原 GLB 办公桌、货架、收音机、小吃车、凳子和石凳，沿用原加载、实例化与碰撞流程。
+          撤下临时拼装枪械、手臂、刀、机器人、喷泉与展示环。射击/近战规则、准星与三条据点路线保留；正式武器外观待合适资产。
+          164 项自动测试通过；三条据点路线、资金、存档、触控布局和公共中心地图操作完成浏览器验证。实机画面和性能仍需验证。
           NOTES
-          gh release create v1.19-centers android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 1.19 · 街区中心' --notes-file notes.md
+          gh release create v1.20-assets android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 1.20 · 原作资源接入' --notes-file notes.md

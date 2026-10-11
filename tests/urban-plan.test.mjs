@@ -51,3 +51,9 @@ test('teleport destination uses the closest road point even when route simplific
  const road=[{pts:[[0,0],[100,0]]}];assert.deepEqual(N.nearestRoadPoint(road,{x:90,z:3}),{x:90,z:0});
  assert.equal(N.nearestRoadPoint(road,{x:NaN,z:0}),null);assert.equal(N.nearestRoadPoint([],{x:0,z:0}),null);
 });
+const assetSource=(await readFile(new URL('../src/world/urban-props.js',import.meta.url),'utf8')).replace("'./urban-plan.js'",JSON.stringify(url(source)));
+const Props=await import(url(assetSource));
+test('public center dressing uses existing authored GLB assets and leaves the central navigation lane free',async()=>{
+ const placements=Props.districtPropPlacements();assert.ok(placements.length>10);
+ for(const p of placements){const h=U.districtDestinations().find(h=>h.id===p.hub);assert.ok(Math.abs(p.x-h.center.x)>=8);assert.ok(p.height>0&&Number.isFinite(p.rotation));const folder=p.name==='radio'?'gear':'props';const data=await readFile(new URL('../assets/'+folder+'/'+p.name+'.glb',import.meta.url));assert.equal(data.readUInt32LE(0),0x46546c67);}
+});

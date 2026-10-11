@@ -1,3 +1,4 @@
+import {Actor,hasKind} from './actor.js';
 import * as THREE from 'three';
 import {COMBAT_RULES,createCombatState,stepCombat,guardDamage} from './combat-core.js';
 import {rayTarget} from './combat-targeting.js';
@@ -15,18 +16,8 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
   const material=color=>new THREE.MeshStandardMaterial({color,roughness:.45});
   const mesh=(geometry,color,parent,x,y,z)=>{const m=new THREE.Mesh(geometry,material(color));m.position.set(x,y,z);parent.add(m);return m;};
   const gun=new THREE.Group();view.add(gun);
-  mesh(new THREE.BoxGeometry(.13,.14,.42),0x3c4c55,gun,.23,-.2,-.48);
-  mesh(new THREE.BoxGeometry(.11,.035,.42),0x82939b,gun,.23,-.105,-.48);
-  mesh(new THREE.BoxGeometry(.08,.21,.1),0x253139,gun,.23,-.34,-.32).rotation.x=-.25;
-  mesh(new THREE.TorusGeometry(.045,.009,4,10),0x82939b,gun,.23,-.31,-.48).rotation.y=Math.PI/2;
-  mesh(new THREE.BoxGeometry(.018,.035,.03),0xd3b36f,gun,.23,-.065,-.66);
-  mesh(new THREE.CylinderGeometry(.035,.035,.25,8),0x9edcca,gun,.23,-.18,-.77).rotation.x=Math.PI/2;
-  // Procedural hands are placeholders for a future rigged first-person animation set.
-  mesh(new THREE.CapsuleGeometry(.045,.18,3,6),0xb68f74,gun,.25,-.32,-.43).rotation.z=.35;
-  mesh(new THREE.BoxGeometry(.08,.09,.09),0xd8b299,gun,.24,-.23,-.5);
+  // Weapon meshes wait for authored GLB assets; keep only gameplay feedback.
   const blade=new THREE.Group();view.add(blade);
-  mesh(new THREE.BoxGeometry(.045,.32,.015),0xdbe5e9,blade,.3,-.1,-.5).rotation.z=-.3;
-  mesh(new THREE.CapsuleGeometry(.05,.15,3,6),0xb68f74,blade,.26,-.35,-.45);
   const flash=new THREE.Mesh(new THREE.SphereGeometry(.09,6,4),new THREE.MeshBasicMaterial({color:0xffd778}));flash.position.set(.23,-.18,-.9);flash.visible=false;gun.add(flash);
   const hud=document.createElement('div');hud.id='combatDemoHUD';hud.hidden=true;
   hud.innerHTML='<span class="combat-crosshair">＋</span><span class="combat-hitmark">×</span><div class="combat-readout"></div><div class="combat-objective"></div><div class="combat-target"></div><div class="combat-upgrades" hidden></div><div class="combat-damage"></div>';
@@ -49,9 +40,10 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
   function hit(t,amount,quiet=false){
     if(t.hp<=0)return;t.hp=Math.max(0,t.hp-amount);t.flash=.18;hitTime=.18;sound('hit');
     if(!quiet)t.hit=true;
-    if(!t.hp){t.root.rotation.z=Math.PI/2;t.brain.mode='down';t.beam.visible=false;log('安保机器人停机',{target:t.id,quiet});}
+    t.actor.hurt();
+    if(!t.hp){t.actor.knockDown();t.brain.mode='down';t.beam.visible=false;log('守卫失去行动能力',{target:t.id,quiet});}
   }
-  function disposeStage(){clearTag('combat-demo');group.traverse(o=>{o.geometry?.dispose();o.material?.dispose();});group.clear();targets=[];devices=[];covers=[];}
+  function disposeStage(){for(const t of targets){t.actor.dispose();t.actor.mats.forEach(m=>m.dispose());}clearTag('combat-demo');group.traverse(o=>{o.geometry?.dispose();o.material?.dispose();});group.clear();targets=[];devices=[];covers=[];}
   function stop(){
     if(!active)return;const p=getPlayer(),o=getOrbit();active=false;group.visible=false;view.visible=false;hud.hidden=true;document.body.classList.remove('combat-active');
     disposeStage();for(let i=blips.length-1;i>=0;i--)if(blips[i].combatMarker)blips.splice(i,1);
@@ -66,6 +58,7 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
     const p=getPlayer(),o=getOrbit();if(!p||p.veh||p.down||o.override||p.actor.busy){toast('请先结束当前动作并下车');return false;}
     saved={pos:p.pos.clone(),heading:p.heading,hp:p.hp,stamina:p.stamina,walkMode:p.walkMode,mode:o.mode,yaw:o.yaw,pitch:o.pitch};p.walkMode=false;
     state=createCombatState();inputState=createCombatInput();mission=createEncounterMission();flashTime=hitTime=hurtTime=elapsed=trace=cameraSuspicion=0;noise=radio=null;access=claimed=cameraTriggered=false;
+    if(!hasKind('thug2')){toast('守卫模型尚未就绪，请稍后再试');return false;}
     active=true;p.hp=p.maxHp;p.combatFloorOffset=.35;p.queued=false;group.visible=true;hud.hidden=false;document.body.classList.add('combat-active');
     p.pos.set(EXIT.x,ground(EXIT.x,EXIT.z),EXIT.z);p.vel.set(0,0,0);o.setMode('first');o.yaw=0;o.pitch=0;
     const floorGeometry=new THREE.PlaneGeometry(32,44,16,22);floorGeometry.rotateX(-Math.PI/2);
@@ -82,15 +75,9 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
     for(const x of [-12,12]){objectBox(x,166,2,.7,3,0xc3b79e);mesh(new THREE.SphereGeometry(.85,8,6),0x527459,group,x,ground(x,166)+1.4,166);}
     const locations=[[-8,185,'cover'],[8,177,'flank'],[0,169,'cover']];
     for(const [i,[x,z,role]] of locations.entries()){
-      const y=ground(x,z),root=new THREE.Group();root.position.set(x,y,z);group.add(root);
-      const body=mesh(new THREE.CylinderGeometry(.4,.45,1,8),0x8acbbd,root,0,1.05,0);
-      const head=mesh(new THREE.BoxGeometry(.48,.35,.4),0xe1e9df,root,0,1.75,0);
-      mesh(new THREE.BoxGeometry(.36,.09,.04),0x557b87,root,0,1.76,.22);
-      const legs=[];
-      for(const side of [-1,1]){legs.push(mesh(new THREE.CapsuleGeometry(.1,.5,3,6),0x384d55,root,side*.25,.4,0));mesh(new THREE.CapsuleGeometry(.08,.45,3,6),0x384d55,root,side*.55,1.02,0);}
-      mesh(new THREE.BoxGeometry(.1,.1,.45),0x293c44,root,.55,1.12,.22);
+      const y=ground(x,z),actor=new Actor('thug2'),root=actor.root;root.position.set(x,y,z);group.add(root);
       const beam=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]),new THREE.LineBasicMaterial({color:0xff795b}));beam.visible=false;group.add(beam);
-      targets.push({id:'guard:'+i,x,y:y+1.1,z,radius:.75,hp:85,root,body,head,legs,beam,beamTime:0,flash:0,disabled:0,brain:createGuardBrain('guard:'+i,role),heading:0,home:{x,z},path:[],pathTimer:0,hit:false});
+      targets.push({id:'guard:'+i,x,y:y+1.1,z,radius:.75,hp:85,root,actor,beam,beamTime:0,flash:0,disabled:0,brain:createGuardBrain('guard:'+i,role),heading:0,home:{x,z},path:[],pathTimer:0,hit:false});
     }
     for(const [id,x,z,color] of [['relay',10,198,0x579dbc],['camera',-12,179,0xd7aa64],['terminal',0,164,0x8bb9a1]]){
       const y=ground(x,z)+.9,root=mesh(new THREE.BoxGeometry(.9,1.8,.8),color,group,x,y,z);
@@ -111,7 +98,7 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
   }
   function advanceGuard(t,dt,p){
     t.flash=Math.max(0,t.flash-dt);t.disabled=Math.max(0,t.disabled-dt);t.beamTime=Math.max(0,t.beamTime-dt);t.beam.visible=t.beamTime>0;
-    t.body.material.emissive.setHex(t.flash?0x663322:t.disabled?0x173766:0);if(!t.hp)return;
+    t.actor.speed=0;if(!t.hp){t.actor.update(dt);return;}
     const dx=p.pos.x-t.x,dz=p.pos.z-t.z,distance=Math.hypot(dx,dz);
     const sight=visible({x:t.x,y:t.y+.4,z:t.z},{x:p.pos.x,y:p.pos.y+eye()*.8,z:p.pos.z});
     const cover=covers.map(c=>({...c,distance:Math.hypot(c.x-t.x,c.z-t.z)})).sort((a,b)=>a.distance-b.distance)[0];
@@ -126,7 +113,7 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
         missionAction(null,{alert:true});log('安保进入战斗状态',{target:t.id});
         if(!devices.find(d=>d.id==='relay').disabled)radio={...t.brain.lastKnown,left:.2};
       }
-      if(e.type==='windup'){t.head.material.emissive.setHex(0x772211);}
+      if(e.type==='windup'){/* Timing feedback stays in the HUD and attack beam. */}
       if(e.type==='fire'){
         const a=new THREE.Vector3(t.x,t.y+.1,t.z),b=new THREE.Vector3(e.at.x,ground(e.at.x,e.at.z)+.9,e.at.z);
         const dir=b.clone().sub(a).normalize(),range=a.distanceTo(b)+2;
@@ -143,7 +130,7 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
         }
       }
     }
-    t.head.material.emissive.setHex(t.brain.windup?0x772211:0);
+
     const dest=r.destination;let walking=false;
     if(dest){
       t.pathTimer-=dt;if(t.pathTimer<=0){t.pathTimer=.8;t.path=encounterRoute(t,dest,BOUNDS,(a,b)=>segmentBlock(a.x,ground(a.x,a.z)+.4,a.z,b.x,ground(b.x,b.z)+.4,b.z)<1);}
@@ -151,14 +138,14 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
       const next=t.path[0];if(next){const mx=next.x-t.x,mz=next.z-t.z,len=Math.hypot(mx,mz)||1,speed=t.brain.mode==='patrol'?1:2.2;
         let [x,z]=resolve(t.x+mx/len*speed*dt,t.z+mz/len*speed*dt,.5,ground(t.x,t.z));
         for(const other of targets){if(other===t||!other.hp)continue;const sx=x-other.x,sz=z-other.z,space=Math.hypot(sx,sz);if(space<1&&space>.001){x=other.x+sx/space;z=other.z+sz/space;}}
-        [x,z]=resolve(x,z,.5,ground(x,z));walking=Math.hypot(x-t.x,z-t.z)>.002;t.x=x;t.z=z;t.y=ground(x,z)+1.1;
-        t.root.position.set(x,ground(x,z),z);t.body.position.y=1.05+Math.sin(elapsed*12)*.025;
+        [x,z]=resolve(x,z,.5,ground(x,z));const actualSpeed=Math.hypot(x-t.x,z-t.z)/Math.max(dt,.001);walking=Math.hypot(x-t.x,z-t.z)>.002;t.x=x;t.z=z;t.y=ground(x,z)+1.1;
+        t.root.position.set(x,ground(x,z),z);t.actor.speed=actualSpeed;
         if(t.brain.mode==='patrol')t.heading=Math.atan2(mx,mz);
       }
     }
-    t.legs.forEach((leg,i)=>leg.rotation.x=walking?Math.sin(elapsed*10+i*Math.PI)*.3:0);
+
     if(t.brain.lastKnown&&t.brain.mode!=='patrol')t.heading=Math.atan2(t.brain.lastKnown.x-t.x,t.brain.lastKnown.z-t.z);
-    t.root.rotation.y=t.heading;
+    t.actor.heading=t.heading;t.actor.update(dt);
   }
   function update(dt,raw,playing,move){
     if(!active)return;const p=getPlayer(),o=getOrbit();
@@ -180,7 +167,7 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
       }else{
         const victim=targets.find(t=>t.hp>0&&Math.hypot(t.x-p.pos.x,t.z-p.pos.z)<2.2&&t.brain.mode!=='combat'&&
           (Math.sin(t.heading)*(p.pos.x-t.x)+Math.cos(t.heading)*(p.pos.z-t.z))<-.5&&visible(origin,t));
-        if(victim&&inputState.crouch){hit(victim,100,true);missionAction('takedown');log('从背后无声停用安保',{target:victim.id});}
+        if(victim&&inputState.crouch){hit(victim,100,true);missionAction('takedown');log('从背后制服守卫',{target:victim.id});}
       }
     }
     const hackValid=!!picked&&Math.hypot(picked.x-p.pos.x,picked.z-p.pos.z)<18&&

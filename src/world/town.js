@@ -148,7 +148,7 @@ function shophouse(k, cx, cz, ry, w, o = {}) {
   // horizontal sign board above the arcade
   const sh = SHOPS[shopI++ % SHOPS.length];
   const name = o.name || sh[0];
-  economyPlaces.push({id:o.special || 'building:'+economyPlaces.length,name,x:cx,z:cz,kind:o.sub?.includes('住戶')||['永和社區','番薯寮新村','幸福大廈'].includes(name)?'housing':'business',special:o.special});
+  if(o.register!==false)economyPlaces.push({id:o.special || 'building:'+economyPlaces.length,name,x:cx,z:cz,kind:o.sub?.includes('住戶')||['永和社區','番薯寮新村','幸福大廈'].includes(name)?'housing':'business',special:o.special});
   // each shop name always gets the same board (so identical boards share one atlas cell)
   const hn = [...name].reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0;
   const uv = drawSign(name, { bg: neon?(o.signBg||sh[1]):campus?'#e8eeeb':'#e8ddc8', fg: neon?(o.signFg||sh[2]):campus?'#254d4b':'#493b2c', border: hn % 2 ? 'rgba(255,255,255,0.6)' : null, sub: neon?(o.sub || (hn % 5 < 2 ? ['電話：(05)2-XXXXX', '營業中', '老店 · 四十年', '批發零售', '歡迎光臨'][hn % 5] : null)):district.name });
@@ -862,7 +862,7 @@ export function buildTown(scene) {
   buildCourt(scene);
   buildHideout(scene);
   buildNature(scene);
-  buildUrbanDistricts(scene,{spawnSpots,seats,lamps});
+  buildUrbanDistricts(scene,{spawnSpots,seats,lamps,buildFacade:shophouse});
   for(const [id,name,kind] of [['home','阿嬤三合院','housing'],['station','車站','transport'],['school','國小','public'],['temple','媽祖廟','public'],['shrine','土地公廟','public'],['court','活動中心','public'],['recycle','回收場','recycling'],['betel','檳榔攤','retail'],['cloth','衣服攤','retail'],['hideout','舊倉庫','storage']]) economyPlaces.push({id,name,kind,...P[id]});
   for(const [i,a] of PADDIES.entries())economyPlaces.push({id:'field:'+i,name:(a.urban?URBAN_NAMES[regionAt((a.x0+a.x1)/2).id]:'農田')+' '+(i+1),kind:'farm',x:(a.x0+a.x1)/2,z:(a.z0+a.z1)/2});
   economyPlaces.push({id:'garden',name:'高麗菜園',kind:'farm',x:(GARDEN.x0+GARDEN.x1)/2,z:(GARDEN.z0+GARDEN.z1)/2});
