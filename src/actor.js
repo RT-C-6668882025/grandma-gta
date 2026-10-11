@@ -1,3 +1,4 @@
+import { gaitRate } from './player-locomotion.js';
 import { loadModel } from './model-loader.js';
 // Rigged characters. Two skeletons are in play:
 //  - Tripo Studio / Mixamo preset (阿嬤): 65 bones named mixamorig*, 17 clips
@@ -458,6 +459,12 @@ export class Actor {
     if (this.acts.walk) { this.acts.walk.setEffectiveWeight(this.w.walk * body); this.acts.walk.timeScale = clamp(s / this.walkRef, 0.5, 1.8); }
     if (this.acts.swagger) { this.acts.swagger.setEffectiveWeight(this.w.swagger * body); this.acts.swagger.timeScale = clamp(s / this.swagRef, 0.5, 1.6); }
     if (this.acts.run) { this.acts.run.setEffectiveWeight(this.w.run * body); this.acts.run.timeScale = clamp(s / this.runRef, 0.6, 1.5); }
+    if (this.groundLocomotion) {
+      // A shared rate matches the blended clips' measured root travel. Allow
+      // zero rate at a wall instead of playing a minimum-speed walk in place.
+      const rate = gaitRate(s, this.w, { walk: this.walkRef, swagger: this.swagRef, run: this.runRef });
+      for (const name of ['walk', 'swagger', 'run']) if (this.acts[name]) this.acts[name].timeScale = rate;
+    }
     this.mixer.update(dt);
 
     // riding: the root carries the vehicle's lean/roll, so the IK below is solved in the final pose

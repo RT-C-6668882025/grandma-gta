@@ -35,15 +35,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v1.11.0-district >/dev/null 2>&1; then exit 0; fi
+          if gh release view v1.12.0-locomotion >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
           手机 / 平板通用版 · Android 8.0+。
-          新增「街区」入口：试验店铺经营卡可切换店铺、注资、调整每人工资、开停业、导航和查看日志。
-          街区店铺显示可点击的营业 / 缺货 / 停业标牌，门前货箱数量随真实库存变化。
-          试验街区的步行员工到店后才领取当轮工资并生产；前来消费的居民沿道路赴店，抵达后才付款和扣库存。战斗或受伤期间暂停到店消费。
-          「日志」名称保持不变；店铺操作、收支和后续事件关联决策编号，可直接前往事件发生地点。
-          此版先实现一个街区的循环，其他产业沿用原模拟规则。保留 GOD / NT$、定向增发、160 人场景和触控布局。
-          110 项自动测试通过。完整真机体验仍待验证。
+          主角地面移动加入起步缓动、快速收步和掉头减速。
+          走跑步频按碰撞后的实际位移与混合动画的参考速度计算，减少撞墙踏步及速度不匹配。
+          保留原版骨骼、战斗命中时机、骑乘和飞扑；日志名称与经济功能保持不变。
+          这是动作优化第一轮，尚未加入专用转身动画、地面脚部 IK 或第一人称身体。高倍速仍属于超能力表现。
+          114 项自动测试通过，真实主角模型运行检查通过；手机 / 平板手感仍需真机验证。
           个人测试签名可能与旧版不同，卸载会清除存档。
           NOTES
-          gh release create v1.11.0-district android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 手机 / 平板通用版 1.11 · 可交互经济街区' --notes-file notes.md
+          gh release create v1.12.0-locomotion android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 手机 / 平板通用版 1.12 · 主角基础步态' --notes-file notes.md

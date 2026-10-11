@@ -1,3 +1,4 @@
+import { stepLocomotion, groundSpeed } from './player-locomotion.js';
 import { MOD, protectedPlayer, speedFactor, flightPosition } from './mods.js';
 import { loadModel } from './model-loader.js';
 // People and animals: the player (阿嬤), townsfolk with simple GTA-ish brains
@@ -234,8 +235,8 @@ export class Player extends Ent {
   update(dt, ctl) {
     const a = this.actor;
     this.tickCommon(dt);
-    if (this.veh) { this.updateActor(dt); return; }
-    if (this.diving && !MOD.fly) { this.updateDive(dt); return; }
+    if (this.veh) { a.groundLocomotion = false; this.updateActor(dt); return; }
+    if (this.diving && !MOD.fly) { a.groundLocomotion = false; this.updateDive(dt); return; }
     const busy = a.busy;
     const down = this.down;
     const mv = ctl.move;
@@ -246,11 +247,17 @@ export class Player extends Ent {
     if (busy && a.cur && ['jab', 'cross', 'kick', 'swing', 'throw'].includes(a.cur.name)) speed *= 0.25;
     if (a.cur && ['phone', 'lift', 'dance', 'angry', 'complain'].includes(a.cur.name)) speed = 0;
     if (down) speed = 0;
-    if (mag > 0.1 && !down) this.heading = dampAngle(this.heading, Math.atan2(mv.x, mv.z), 12, dt);
-    const tvx = mag > 0.1 ? Math.sin(this.heading) * speed : 0, tvz = mag > 0.1 ? Math.cos(this.heading) * speed : 0;
-    this.vel.x = damp(this.vel.x, tvx, 10, dt); this.vel.z = damp(this.vel.z, tvz, 10, dt);
+    if (MOD.fly) {
+      if (mag > 0.1 && !down) this.heading = dampAngle(this.heading, Math.atan2(mv.x, mv.z), 12, dt);
+      this.vel.x = damp(this.vel.x, mag > 0.1 ? Math.sin(this.heading) * speed : 0, 10, dt);
+      this.vel.z = damp(this.vel.z, mag > 0.1 ? Math.cos(this.heading) * speed : 0, 10, dt);
+    } else {
+      const motion = stepLocomotion(this.heading, this.vel.x, this.vel.z, mv.x, mv.z, speed, dt);
+      this.heading = motion.heading; this.vel.x = motion.vx; this.vel.z = motion.vz;
+    }
     this.stamina = clamp(this.stamina + (sprint ? -14 : 9 * (G.flags.smoking ? 1.6 : 1)) * dt, 0, 100);
     this.flightAxis = ctl.flyAxis || 0;
+    const startX = this.pos.x, startZ = this.pos.z;
     this.integrate(dt);
     a.swag = this.walkMode || (swag() >= 20 && !sprint);
     // combat
@@ -269,6 +276,8 @@ export class Player extends Ent {
     }
     if (this.betelT > 0) { this.betelT -= dt; if (this.betelT <= 0) { const m = a.headPos(_v); m.addScaledVector(a.fwdAxis(), 0.15); emit('fx', 'spit', m); emit('sfx', 'spit', this.pos); } }
     this.place();
+    a.groundLocomotion = !MOD.fly && !down;
+    if (a.groundLocomotion) a.speed = groundSpeed(this.pos.x - startX, this.pos.z - startZ, dt, Math.hypot(this.vel.x, this.vel.z));
     this.updateActor(dt);
   }
   // 飛撲: the dive clip plays in place while 阿嬤 travels along the measured leap; the catch is checked as she lands
