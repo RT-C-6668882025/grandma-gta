@@ -84,9 +84,9 @@ export function worldRound(e){
     let candidates=preferred?(bySector[preferred]||[]):employable;
     const last=ds.find(d=>d.id===h.industry);
     candidates=[...(last&&e.industries[last.id].open?[last]:[]),...candidates.slice(h.id%candidates.length),...candidates.slice(0,h.id%candidates.length)];
-    const d=candidates.find(d=>{const b=e.industries[d.id];return b.open&&b.staff+(b.reserved||0)<b.staffGoal&&(b.cash+(e.crypto.holders['i:'+d.id]||0)*rate)>=(b.wage||12)+(h.ability-1)*2;});
+    const d=candidates.find(d=>{const b=e.industries[d.id];return b.open&&b.staff+(b.reserved||0)<b.staffGoal&&(b.cash+(e.crypto.holders['i:'+d.id]||0)*rate)>=(b.wage||12)+(h.ability-1)*2+(b.sourcecore?.active?2:0);});
     if(!d){h.job='rest';m.unpaid++;continue;}
-    const b=e.industries[d.id],currency=e.coinMode?b.currency:'ntd',baseWage=(b.wage||12)+(h.ability-1)*2;
+    const b=e.industries[d.id],currency=e.coinMode?b.currency:'ntd',baseWage=(b.wage||12)+(h.ability-1)*2+(b.sourcecore?.active?2:0);
     if(w.district?.includes(d.id)&&h.role==='ped'&&h.location){h.industry=d.id;const at=d.entrance||d;if(Math.hypot(h.location.x-at.x,h.location.z-at.z)>10){h.job='commute';b.reserved++;b.reason='员工通勤中';continue;}}
     if(!settle(e,'i:'+d.id,owner,baseWage,currency,'工资 · '+d.name)){b.reason='无法支付工资 / 兑换池不足';m.unpaid++;continue;}
     const wage=currency==='beta'?toCoins(e,baseWage):baseWage;b[currency==='beta'?'wages':'wagesNT']+=wage;b.roundPayroll+=baseWage;h.roundIncome=currency==='ntd'?baseWage:0;b.staff++;m.workers++;m.wages+=currency==='beta'?wage*rate:wage;h.working=true;if(h.industry!==d.id)event(e,'就业',h.name+' 入职 '+d.name,{resident:h.id,industry:d.id});h.industry=d.id;b.reason='营业中';
@@ -99,7 +99,7 @@ export function worldRound(e){
         const farm=(bySector.farm||[]).find(q=>e.industries[q.id].open&&e.industries[q.id].stock>0);
         if(!farm||!settle(e,'i:'+d.id,'i:'+farm.id,4,currency,'采购农产品')){b.reason='缺少原料或采购资金';continue;}b.roundCosts+=4;e.industries[farm.id].stock--;e.industries[farm.id].roundSales+=4;
       }
-      qty=Math.min(qty+b.level-1,500-b.stock);b.stock+=qty;b.roundOutput+=qty;m.production+=qty;
+      qty=Math.min(qty+b.level-1+(b.sourcecore?.active?2:0),500-b.stock);b.stock+=qty;b.roundOutput+=qty;m.production+=qty;
       for(const key of Object.keys(b.items))if(b.items[key]<5&&b.stock>0){b.items[key]++;}
     }else {b.roundOutput++;m.services++;}
   }

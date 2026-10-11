@@ -53,14 +53,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v1.20-assets >/dev/null 2>&1; then exit 0; fi
+          if gh release view v1.21-cooperation >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
           手机 / 平板通用版 · Android 8.0+，固定签名，可覆盖安装稳定版。
-          人物和道具沿用原作者的 Tripo/GLB/骨骼动画流程，缺少正式资源时延期。
-          据点守卫替换为原作 thug2 人物，复用 Actor 的移动、受击、倒地与动作混合；退出时避免释放共享模型几何和贴图。
-          新区建筑改用原作者 shophouse 生成器，中心周边立面朝向公共空间；复用建筑时不重复建立产业账户。
-          中心道具接入原 GLB 办公桌、货架、收音机、小吃车、凳子和石凳，沿用原加载、实例化与碰撞流程。
-          撤下临时拼装枪械、手臂、刀、机器人、喷泉与展示环。射击/近战规则、准星与三条据点路线保留；正式武器外观待合适资产。
-          164 项自动测试通过；三条据点路线、资金、存档、触控布局和公共中心地图操作完成浏览器验证。实机画面和性能仍需验证。
+          店铺面板接入源核授权：投入 NT$100，三个实际完成生产或服务的轮次后落地。
+          落地后每名员工工资增加 NT$2，生产岗位每人产出增加 2；正经营利润的 10% 在保留运营资金后支付给阿嬤。
+          缺人、停业、关闭生产会暂停合作；进度、落地、授权收入与终止记录进入「日志」。
+          合作随固定店铺保存，控股人变化不重置；可随时终止，不虚构退款或发行奖励。
+          复用原作者美术资源，移除临时库存方块，没有新增人物或武器占位模型。
+          168 项自动测试通过；浏览器验证授权、实时进度、日志、存档恢复和终止入口。实机手感及经济平衡仍需游玩验证。
           NOTES
-          gh release create v1.20-assets android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 1.20 · 原作资源接入' --notes-file notes.md
+          gh release create v1.21-cooperation android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 1.21 · 源核合作' --notes-file notes.md

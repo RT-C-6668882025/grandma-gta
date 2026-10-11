@@ -24,11 +24,32 @@ export function governmentAction(e,action){ensureAgents(e);const g=e.government;
  else if(styles.includes(action)){g.leader=(g.leader+1)%Math.max(1,e.households.length);g.style=action;g.term++;message='更换执政者，采用'+action+'取向';}
  else return false;decision(e,message,{industry:'civic'});return true;
 }
+// Cooperation is attached to the fixed shop, so an ownership change keeps the license.
+export function sourcecoreAction(e,id){
+ ensureAgents(e);const b=e.industries?.[id],d=e.world?.places.find(d=>d.id===id);
+ if(!b||!d||b.owner==='government'||['housing','storage'].includes(d.sector)||d.kind==='archive')return false;
+ const p=b.sourcecore;
+ if(p){delete b.sourcecore;decision(e,'终止 '+d.name+' 的源核合作；已使用的研发投入不退回',{industry:id});return true;}
+ if(!transfer(e,'player','i:'+id,100,'源核试用投入 · '+d.name))return false;
+ const row=decision(e,'向 '+d.name+' 授权源核试用，投入 NT$100；完成 3 个有员工工作的生产轮次后落地',{industry:id});
+ b.sourcecore={version:1,progress:0,active:false,royalties:0,decisionId:row.id,lastRound:e.round};return true;
+}
+export function sourcecoreRound(e,d){
+ const b=e.industries[d.id],p=b.sourcecore;if(!p||p.version!==1||p.lastRound===e.round)return;
+ p.lastRound=e.round;
+ const working=b.open&&b.staff>0&&b.roundOutput>0&&e.supply;
+ const status=working?(p.active?'运行中':'试用中'):!b.open?'店铺停业':!e.supply?'生产已关闭':!b.staff?'没有到岗员工':'未完成生产或服务';
+ if(p.status!==status){event(e,'源核合作',d.name+'：'+status,{industry:d.id,decisionId:p.decisionId});p.status=status;}
+ if(!working)return;
+ if(!p.active){p.progress=Math.min(3,(p.progress||0)+1);event(e,'源核合作',d.name+' 试用进度 '+p.progress+'/3',{industry:d.id,decisionId:p.decisionId});if(p.progress===3){p.active=true;event(e,'源核落地',d.name+' 下轮起每名员工工资增加 NT$2，生产岗位每人产出增加 2；正经营利润的 10% 支付给阿嬤，亏损不付',{industry:d.id,decisionId:p.decisionId});}return;}
+ const fee=Math.min(Math.floor(Math.max(0,b.profit||0)*.1),Math.max(0,b.cash-Math.max(100,b.capacity*(b.wage||12)*2)));
+ if(fee>0&&transfer(e,'i:'+d.id,'player',fee,'源核授权收益 · '+d.name)){b.roundCosts=(b.roundCosts||0)+fee;b.profit-=fee;p.royalties+=fee;event(e,'源核收益',d.name+' 实付授权收益 NT$'+fee+'；累计 NT$'+p.royalties,{industry:d.id,decisionId:p.decisionId});}
+}
 // Earned surplus purchases existing coins from the issuer; no fabricated profits or currency.
 function accumulate(e,owner,earned){if(!e.crypto.enabled||earned<=0||owner==='player')return;const rate=exchangeRate(e),account=owner.startsWith('h:')?e.households[+owner.slice(2)]:e.industries[owner.slice(2)],cash=account.cash;const keep=owner.startsWith('h:')?60:100;account.godSavingsNT=(account.godSavingsNT||0)+Math.floor(earned*.3);const qty=Math.min(Math.floor(account.godSavingsNT/rate),Math.floor(Math.max(0,cash-keep)/rate),e.crypto.holders.player);if(qty>0&&transfer(e,owner,'player',qty*rate,'收入积累 GOD')){coinTransfer(e,'player',owner,qty,'收入积累 GOD');account.godSavingsNT-=qty*rate;e.issuerSalesNT=(e.issuerSalesNT||0)+qty*rate;}}
 export function agentRound(e){ensureAgents(e);const g=e.government;
  for(const h of e.households){const earned=h.working?Math.min(h.roundIncome||0,Math.max(0,h.cash-(h.roundStartCash??(h.cash-(h.roundIncome||0))))):0;accumulate(e,'h:'+h.id,earned);}
- for(const d of e.world.places){const b=e.industries[d.id];if(b.owner==='government'||d.kind==='archive')continue;const rate=exchangeRate(e);if(b.owner!=='player'){const owner=e.households.find(h=>'h:'+h.id===b.owner);if(owner?.cash>180&&b.cash<56&&transfer(e,b.owner,'i:'+d.id,100,'老板自动补充运营资金')){b.open=true;event(e,'经营',owner.name+' 补充资金，'+d.name+' 继续招聘',{industry:d.id});}}b.businessState=b.previousSales>0&&b.roundSales<b.previousSales*.7?'生意转弱，减少招聘':b.roundSales>(b.previousSales||0)*1.2&&b.roundSales>0?'客流增加，准备扩张':'正常经营';b.profit=(b.roundSales||0)-(b.roundPayroll||0)-(b.roundCosts||0)-(b.roundTax||0);accumulate(e,'i:'+d.id,b.profit);const reserve=Math.max(100,b.capacity*(b.wage||12)*2);const dividend=Math.max(0,Math.min(Math.floor(b.profit*.5),Math.max(0,b.cash-reserve)));if(dividend&&transfer(e,'i:'+d.id,b.owner,dividend,'经营分红 · '+d.name)){accumulate(e,b.owner,dividend);if(b.owner==='player')e.playerDividends=(e.playerDividends||0)+dividend;event(e,'分红',d.name+' 向 '+ownerName(e,b)+' 分红 NT$'+dividend,{industry:d.id});}
+ for(const d of e.world.places){const b=e.industries[d.id];if(b.owner==='government'||d.kind==='archive')continue;const rate=exchangeRate(e);if(b.owner!=='player'){const owner=e.households.find(h=>'h:'+h.id===b.owner);if(owner?.cash>180&&b.cash<56&&transfer(e,b.owner,'i:'+d.id,100,'老板自动补充运营资金')){b.open=true;event(e,'经营',owner.name+' 补充资金，'+d.name+' 继续招聘',{industry:d.id});}}b.businessState=b.previousSales>0&&b.roundSales<b.previousSales*.7?'生意转弱，减少招聘':b.roundSales>(b.previousSales||0)*1.2&&b.roundSales>0?'客流增加，准备扩张':'正常经营';b.profit=(b.roundSales||0)-(b.roundPayroll||0)-(b.roundCosts||0)-(b.roundTax||0);sourcecoreRound(e,d);accumulate(e,'i:'+d.id,b.profit);const reserve=Math.max(100,b.capacity*(b.wage||12)*2);const dividend=Math.max(0,Math.min(Math.floor(b.profit*.5),Math.max(0,b.cash-reserve)));if(dividend&&transfer(e,'i:'+d.id,b.owner,dividend,'经营分红 · '+d.name)){accumulate(e,b.owner,dividend);if(b.owner==='player')e.playerDividends=(e.playerDividends||0)+dividend;event(e,'分红',d.name+' 向 '+ownerName(e,b)+' 分红 NT$'+dividend,{industry:d.id});}
   if(b.cash+(e.crypto.holders['i:'+d.id]||0)*rate<(b.wage||12))b.distress=(b.distress||0)+1;else b.distress=0;
   if(b.distress>=4&&b.owner!=='player'){const buyer=[...e.households].filter(h=>'h:'+h.id!==b.owner&&h.active!==false).sort((a,b)=>b.cash-a.cash)[0],price=shopQuote(e,d.id);if(buyer&&buyer.cash>price+100&&transfer(e,'h:'+buyer.id,b.owner,price,'接手困境店铺')){b.owner='h:'+buyer.id;b.distress=0;transfer(e,b.owner,'i:'+d.id,100,'新老板恢复经营');b.open=true;event(e,'控股变更',buyer.name+' 接手 '+d.name,{industry:d.id});}}
  }
