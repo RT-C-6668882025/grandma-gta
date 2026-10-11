@@ -73,8 +73,14 @@ for (let [x0, z0, x1, z1] of [[-30, 70, 92, 226], [108, 70, 192, 222], [-180, 11
   for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
     const a = x0 + ((x1 - x0) * i) / nx + 0.7, b = z0 + ((z1 - z0) * j) / nz + 0.7;
     const c = x0 + ((x1 - x0) * (i + 1)) / nx - 0.7, d = z0 + ((z1 - z0) * (j + 1)) / nz - 0.7;
-    PADDIES.push({ x0: a, z0: b, x1: c, z1: d, dry: (i * 7 + j * 3) % 9 === 0 });
+    PADDIES.push({ x0: a, z0: b, x1: c, z1: d, dry: (i * 7 + j * 3) % 9 === 0, urban: !(a < 18 && c > -18 && b < 208 && d > 158) });
   }
+}
+// Walkable urban lanes reuse plot boundaries and connect at shared corners.
+for(const [i,p] of PADDIES.entries())if(p.urban){
+ const x=(p.x0+p.x1)/2;
+ ROADS.push({name:'街坊步道 '+i,urban:true,kind:'lane',w:3,pts:[[x,p.z0-.7],[x,p.z1+.7]]});
+ ROADS.push({name:'街坊连廊 '+i,urban:true,kind:'lane',w:2.5,pts:[[p.x0-.7,p.z1+.7],[p.x1+.7,p.z1+.7]]});
 }
 export const PADDY_Y = -0.42, WATER_Y = -0.16;
 

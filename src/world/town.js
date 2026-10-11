@@ -1,3 +1,5 @@
+import {buildUrbanDistricts} from './urban.js';
+import {URBAN_NAMES} from './urban-plan.js';
 import {regionAt,CITY_REGIONS} from '../city-regions.js';
 // 番薯寮 town builder: arcade shophouses (騎樓透天厝) along 中正路, the corner
 // shop, hardware store, police box, temple and square, the courtyard house,
@@ -827,6 +829,7 @@ function buildNature(scene) {
   // paddy water pumps / scarecrows / irrigation channels
   for (let i = 0; i < 40; i++) {
     const p = PADDIES[Math.floor(R() * PADDIES.length)];
+    if(p.urban)continue;
     const x = p.x0 + R() * (p.x1 - p.x0), z = p.z0 + R() * (p.z1 - p.z0);
     if (R() < 0.6) { // scarecrow
       k.beam(x, -0.4, z, x, 1.6, z, 0.04, C.wood); k.beam(x - 0.8, 1.1, z, x + 0.8, 1.1, z, 0.03, C.wood);
@@ -859,8 +862,9 @@ export function buildTown(scene) {
   buildCourt(scene);
   buildHideout(scene);
   buildNature(scene);
+  buildUrbanDistricts(scene,{spawnSpots,seats,lamps});
   for(const [id,name,kind] of [['home','阿嬤三合院','housing'],['station','車站','transport'],['school','國小','public'],['temple','媽祖廟','public'],['shrine','土地公廟','public'],['court','活動中心','public'],['recycle','回收場','recycling'],['betel','檳榔攤','retail'],['cloth','衣服攤','retail'],['hideout','舊倉庫','storage']]) economyPlaces.push({id,name,kind,...P[id]});
-  for(const [i,a] of PADDIES.entries())economyPlaces.push({id:'field:'+i,name:'農田 '+(i+1),kind:'farm',x:(a.x0+a.x1)/2,z:(a.z0+a.z1)/2});
+  for(const [i,a] of PADDIES.entries())economyPlaces.push({id:'field:'+i,name:(a.urban?URBAN_NAMES[regionAt((a.x0+a.x1)/2).id]:'農田')+' '+(i+1),kind:'farm',x:(a.x0+a.x1)/2,z:(a.z0+a.z1)/2});
   economyPlaces.push({id:'garden',name:'高麗菜園',kind:'farm',x:(GARDEN.x0+GARDEN.x1)/2,z:(GARDEN.z0+GARDEN.z1)/2});
   for(const d of economyPlaces){const r=regionAt(d.x,d.z);d.region=r.id;d.regionName=r.name;}
   const regionalKit=new Kit();for(const r of CITY_REGIONS){const y=heightAt(r.x,-7);regionalKit.box(r.x,y,-7,.12,2.6,.12,0x697978,0);regionalKit.sign(r.x,y+1.8,-6.9,2.8,.7,drawSign(r.name,{bg:'#e5e0d2',fg:'#283c3a',sub:'全球发展最快的城市'}));}scene.add(regionalKit.build('region-gateways'));

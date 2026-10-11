@@ -39,6 +39,7 @@ function shapedHeight(x, z) {
   const rd = roadDist(x, z);
   h = lerp(0, h, smooth(0, 6, rd));
   const p = inPaddy(x, z, 0.4);
+  if (p?.urban) return 0;
   if (p) {
     // soft 40 cm step down into the paddy
     const d = Math.min(x - p.x0, p.x1 - x, z - p.z0, p.z1 - z);
@@ -59,7 +60,7 @@ export function floorAt(x, z) {
   const h = heightAt(x, z);
   return h;
 }
-export const isPaddy = (x, z) => { const p = inPaddy(x, z); return p && !p.dry ? p : null; };
+export const isPaddy = (x, z) => { const p = inPaddy(x, z); return p && !p.dry && !p.urban ? p : null; };
 export function heightTexture() {
   const t = new THREE.DataTexture(H, N + 1, N + 1, THREE.RedFormat, THREE.FloatType);
   t.magFilter = t.minFilter = THREE.LinearFilter;
@@ -106,6 +107,7 @@ function paintGround() {
   // paddies: muddy water, ridges, seedling rows (bright green = the grass shader grows seedlings there)
   for (const p of PADDIES) {
     const x0 = toPx(p.x0), z0 = toPx(p.z0), w = (p.x1 - p.x0) * K, d = (p.z1 - p.z0) * K;
+    if(p.urban){g.fillStyle=(p.x0+p.x1)/2<-136?'#c5c5c5':(p.x0+p.x1)/2>=170?'#62666d':'#ccc4b8';g.fillRect(x0-.8*K,z0-.8*K,w+1.6*K,d+1.6*K);continue;}
     g.fillStyle = '#8f8a5c'; g.fillRect(x0 - 0.8 * K, z0 - 0.8 * K, w + 1.6 * K, d + 1.6 * K); // ridge
     if (p.dry) { g.fillStyle = '#7a6448'; g.fillRect(x0, z0, w, d); g.strokeStyle = 'rgba(60,45,30,0.5)'; g.lineWidth = 1.5; for (let z = 1; z < p.z1 - p.z0; z += 1.2) { g.beginPath(); g.moveTo(x0, z0 + z * K); g.lineTo(x0 + w, z0 + z * K); g.stroke(); } continue; }
     g.fillStyle = '#5b6248'; g.fillRect(x0, z0, w, d);
@@ -168,7 +170,7 @@ function paintGround() {
     g.beginPath();
     r.pts.forEach(([x, z], i) => (i ? g.lineTo(toPx(x), toPx(z)) : g.moveTo(toPx(x), toPx(z))));
     if (pass === 0) { g.strokeStyle = r.kind === 'field' ? 'rgba(110,98,76,0.6)' : '#8d8a84'; g.lineWidth = (r.w + (r.kind === 'field' ? 1.5 : 0.8)) * K; }
-    else { g.strokeStyle = roadCol[r.kind]; g.lineWidth = r.w * K; }
+    else { g.strokeStyle = r.urban?(r.pts[0][0]<-136?'#929a9d':r.pts[0][0]>=170?'#4c5059':'#b9ad99'):roadCol[r.kind]; g.lineWidth = r.w * K; }
     g.stroke();
   }
   // asphalt speckle + patches
@@ -304,7 +306,7 @@ function buildPaddyWater() {
   const pos = [], idx = [];
   let v = 0;
   for (const p of PADDIES) {
-    if (p.dry) continue;
+    if (p.dry || p.urban) continue;
     pos.push(p.x0, WATER_Y, p.z0, p.x1, WATER_Y, p.z0, p.x1, WATER_Y, p.z1, p.x0, WATER_Y, p.z1);
     idx.push(v, v + 2, v + 1, v, v + 3, v + 2);
     v += 4;

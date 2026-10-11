@@ -53,14 +53,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v1.17-sourcecore >/dev/null 2>&1; then exit 0; fi
+          if gh release view v1.18-urban >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
           手机 / 平板通用版 · Android 8.0+，固定签名，可覆盖安装稳定版。
-          源核据点首版：夺取芯片后撤离，可选择正面强攻、潜行处置或扫描破解。
-          守卫具备视线、声音警戒、失去目标后的搜索、掩体和侧翼移动；摄像头、中继器与终端可互动。
-          第一人称枪械与近战、换弹、格挡、闪避、长按重击；手机和平板八键战斗布局。
-          完成获得经验，可安装精准射击、低耗破解、轻盈闪避。首次现金奖励由现有银行账户支付，日志及成长保存。
-          更新源核背景与三区社会特征。157 项自动测试通过，三条路线、成长存档与触控布局完成浏览器验证。
-          据点为独立可选原型：武器与守卫使用程序模型，尚非全城战斗改造或正式骨骼枪械动画；实机性能与手感仍需游玩验证。
+          三区整体改造首轮：142 个外围街坊，澄湾 41、榆庭 52、东埠 49；规划面积仍为 30% / 45% / 25%。
+          澄湾：低层玻璃园区、屋顶温室、简洁导视与绿地；榆庭：石材院落、坡屋顶、拱形门框、工艺社与座椅；东埠：密集高楼、开放工坊、外露设备与廉价霓虹。
+          新增步道、连廊、居民活动点和座椅；地块抬平并移除旧水面与稻苗，修复城市地块仍被判定涉水的问题。
+          原地块账户与农业产出保留，名称更新为科创园、生活院和试造坊，农业表现为楼内/屋顶培育。经济资金与源核据点兼容。
+          160 项自动测试通过；三区碰撞与入口、三条战斗路线、成长存档、手机和平板布局完成浏览器验证。
+          本轮为程序建筑与街景首版，原章节、特殊地标和部分旧设施保留。采用分块合并几何；手机和平板性能仍需实机验证。
           NOTES
-          gh release create v1.17-sourcecore android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 1.17 · 源核据点' --notes-file notes.md
+          gh release create v1.18-urban android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 1.18 · 三区街坊' --notes-file notes.md
