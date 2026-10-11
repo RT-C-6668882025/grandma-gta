@@ -21,6 +21,7 @@ function fresh() {
     stats: { hits: 0, papers: 0, fares: 0, stolen: 0, recycled: 0, lottery: 0, earned: 0 },
     hour: 6.2, weather: 'clear', day: 1,
     radio: 1,
+    combatProgress: {version:1,xp:0,clears:0,perks:[]},
   };
 }
 export let G = fresh();

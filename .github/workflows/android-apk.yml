@@ -53,12 +53,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v1.16-districts >/dev/null 2>&1; then exit 0; fi
+          if gh release view v1.17-sourcecore >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
           手机 / 平板通用版 · Android 8.0+，固定签名，可覆盖安装稳定版。
-          城市背景：全球发展最快的城市。现有可游玩规划边界内，澄湾区 30%、榆庭区 45%、东埠区 25%。
-          澄湾：低层玻璃立面、绿化及简洁招牌；榆庭：浅色石材、拱廊、阳台和坡屋顶；东埠：密集招牌、廉价霓虹与外露设备。
-          地图显示分区边界与可导航/瞬移的区域标记，店铺、导航及新日志事件使用一致地区名称。
-          137 项自动测试通过；经济账户及旧存档保持兼容。建筑与街景为首轮改造，原任务、角色及部分地标保留。
+          源核据点首版：夺取芯片后撤离，可选择正面强攻、潜行处置或扫描破解。
+          守卫具备视线、声音警戒、失去目标后的搜索、掩体和侧翼移动；摄像头、中继器与终端可互动。
+          第一人称枪械与近战、换弹、格挡、闪避、长按重击；手机和平板八键战斗布局。
+          完成获得经验，可安装精准射击、低耗破解、轻盈闪避。首次现金奖励由现有银行账户支付，日志及成长保存。
+          更新源核背景与三区社会特征。157 项自动测试通过，三条路线、成长存档与触控布局完成浏览器验证。
+          据点为独立可选原型：武器与守卫使用程序模型，尚非全城战斗改造或正式骨骼枪械动画；实机性能与手感仍需游玩验证。
           NOTES
-          gh release create v1.16-districts android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 1.16 · 城市三区' --notes-file notes.md
+          gh release create v1.17-sourcecore android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 1.17 · 源核据点' --notes-file notes.md

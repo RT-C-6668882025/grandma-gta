@@ -1,3 +1,4 @@
+import {createCombatDemo} from './combat-demo.js';
 import {regionAt,regionMarkers} from './city-regions.js';
 import { combatActions, contextAction } from './control-actions.js';
 import {initDistrict} from './district.js';
@@ -77,6 +78,7 @@ const tick = () => new Promise((r) => setTimeout(r, 0));
 let player = null, sky = null, orbit = null, rain = null, grass = null, birds = null;
 const audio = new Audio();
 const law = createLawSystem();
+const combatDemo = createCombatDemo({scene,camera,ground:heightAt,getPlayer:()=>player,getOrbit:()=>orbit,log:(message,details={})=>event(G.economy,'战斗',message,details),toast:message=>ui.toast(message),blips,getProgress:()=>G.combatProgress,setProgress:p=>{G.combatProgress=p;},saveProgress:()=>doSave(),sound:name=>audio.play(name,.45),reward:()=>{const amount=Math.min(100,G.economy.bank);if(amount>0&&transfer(G.economy,'bank','player',amount,'源核据点首次完成奖励')){G.money=G.economy.player;return amount;}return 0;}});
 let mode = 'loading', hudT = 0, saveT = 0, time = 0, stepDist = 0, dt = 0;
 const lights = [];
 const ctx = { get time() { return time; }, get dt() { return dt; }, audio, scene, fade: (on) => ui.fade(on), openBackpack: () => openBackpack() };
@@ -124,6 +126,7 @@ async function boot() {
 
 async function start(cont) {
   if (mode !== 'title') return;
+  combatDemo.stop();
   mode = 'starting';
   startButtons.forEach(button => { button.disabled = true; });
   loadmsg.textContent = '正在準備遊戲……';
@@ -310,7 +313,7 @@ ui.mapData=()=>({markers:[...regionMarkers(),...(G.economy.world?.places||[]).fi
 const clock = new THREE.Clock();
 let prNow = prMax, frAcc = 0, frN = 0;
 let touchInteraction = '互动';
-const updateTouch = initTouch(canvas, () => ({ active: mode === 'play', playing: mode === 'play' && !ui.open && !inputLocked() && !dance.on && !player?.down, dancing: dance.on && !ui.open, driving: !!player?.veh, interaction: touchInteraction, toast: message => ui.toast(message) }));
+const updateTouch = initTouch(canvas, () => ({ active: mode === 'play', playing: mode === 'play' && !ui.open && !inputLocked() && !dance.on && !player?.down, dancing: dance.on && !ui.open, driving: !!player?.veh, combat:combatDemo.active, crouched:combatDemo.crouched, scanning:combatDemo.scanning, interaction: touchInteraction, toast: message => ui.toast(message) }));
 const updateDisplay = initDisplay(canvas, () => ({ playing: mode === 'play' && !ui.open && !inputLocked() && !dance.on }));
 function frame() {
   updateDisplay();
@@ -353,7 +356,7 @@ function step(d) {
   if (hit('KeyL')) {unlock();openJournal(ui,G.economy);}
   if (hit('KeyN')) { if (ui.open) ui.close(); else openEconomy(); }
   if (hit('KeyO')) { if (ui.open) ui.close(); else openPowers(); }
-  if (!ui.open && hit('KeyV')) { if (player.veh) exitVehicle(); setPower('fly', !MOD.fly); player.diving = null; ui.toast(MOD.fly ? '飛行開啟：PageUp 上升，PageDown 下降' : '飛行關閉'); }
+  if (!ui.open && !combatDemo.active && hit('KeyV')) { if (player.veh) exitVehicle(); setPower('fly', !MOD.fly); player.diving = null; ui.toast(MOD.fly ? '飛行開啟：PageUp 上升，PageDown 下降' : '飛行關閉'); }
   if (hit('Escape')) { if (ui.open) ui.close(); else { unlock(); ui.panel('暫停', pauseHtml(), bindPause); } }
   if (ui.open === 'dialog' || ui.open === 'phone') for (let n = 1; n <= 9; n++) if (hit('Digit' + n)) ui.dialogKey(n);
   if (dance.on) for (const k of ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown', 'KeyA', 'KeyW', 'KeyD', 'KeyS']) if (hit(k)) danceKey(k);
@@ -368,7 +371,8 @@ function step(d) {
   if (playing && hit('KeyC')) switchCamera();
   if (!ui.open && !locked) {
     pollMouseLook(d);
-    orbit.input(mouse.dx, mouse.dy, mouse.wheel);
+    const lookScale=combatDemo.active?(combatDemo.state.aiming?.45:combatDemo.scanning?.65:1):1;
+    orbit.input(mouse.dx*lookScale, mouse.dy*lookScale, mouse.wheel);
     if (playing && hit('KeyZ')) orbit.recenter(player.veh ? player.veh.heading : player.heading);
   }
   const { f, r } = orbit.basis();
@@ -376,10 +380,10 @@ function step(d) {
     (down('KeyD', 'ArrowRight') ? 1 : 0) - (down('KeyA', 'ArrowLeft') ? 1 : 0), touchMove, playing);
   // ---------- vehicle / on foot
   const v = player.veh;
-  const contextPressed = playing && hit('KeyE');
+  const contextPressed = playing && !combatDemo.active && hit('KeyE');
   const exitedByContext = contextPressed && !!v;
   if (exitedByContext) exitVehicle();
-  if (playing && hit('KeyF') && !exitedByContext) {
+  if (playing && !combatDemo.active && hit('KeyF') && !exitedByContext) {
     if (v) exitVehicle();
     else { const nv = nearestVehicle(); if (nv) enterVehicle(nv); }
   }
@@ -418,18 +422,24 @@ function step(d) {
     flyAxis: playing && MOD.fly ? (down('PageUp') ? 1 : 0) - (down('PageDown') ? 1 : 0) : 0,
     move: { x: f.x * fw + r.x * rt, z: f.z * fw + r.z * rt },
     sprint: playing && down('ShiftLeft', 'ShiftRight'),
-    attack: combat.attack,
-    throw: combat.throw,
+    attack: !combatDemo.active && combat.attack,
+    combatMode: combatDemo.active,
+    throw: !combatDemo.active && combat.throw,
     target: target && target.distTo(player) < 3.2 ? target : null,
     aim: f,
   };
   if (ctl.throw) ctl.target = target;
-  if (playing && hit('KeyQ') && !player.veh) { player.walkMode = !player.walkMode; ui.toast(player.walkMode ? '痞步模式 😎' : '正常走路'); }
+  if (playing && !combatDemo.active && hit('KeyQ') && !player.veh) { player.walkMode = !player.walkMode; ui.toast(player.walkMode ? '痞步模式 😎' : '正常走路'); }
   if (playing && hit('KeyX')) player.lightUp();
   if (playing && hit('KeyH')) { const id = ['bolida', 'bread', 'soda'].find((k) => count(k) > 0); if (id) useItem(id); else ui.toast('沒有吃的喝的。柑仔店有寶力大補。', true); }
   if (playing && hit('KeyB')) useItem('betel');
-  if (playing && !MOD.fly && hit('Space') && !player.veh && !player.actor.busy) { player.actor.play(['angry', 'complain', 'laugh', 'fold'][Math.floor(Math.random() * 4)], { dur: 2.2 }); bark(['hit2', 'm3_ama1', 'lottery_lose'][Math.floor(Math.random() * 3)]); for (const e of ents) if (e.role === 'ped' && e.distTo(player) < 8) { e.state = 'flee'; e.fleeT = 3; } }
+  if (playing && !combatDemo.active && !MOD.fly && hit('Space') && !player.veh && !player.actor.busy) { player.actor.play(['angry', 'complain', 'laugh', 'fold'][Math.floor(Math.random() * 4)], { dur: 2.2 }); bark(['hit2', 'm3_ama1', 'lottery_lose'][Math.floor(Math.random() * 3)]); for (const e of ents) if (e.role === 'ped' && e.distTo(player) < 8) { e.state = 'flee'; e.fleeT = 3; } }
   // ---------- simulate
+  if(combatDemo.active) {
+    combatDemo.update(d,{attackHeld:mouse.left||down('KeyJ'),attackPressed:mouse.clickL||hit('KeyJ'),aimHeld:mouse.right||down('KeyG'),scanPressed:hit('KeyQ'),crouchPressed:hit('ControlLeft','ControlRight'),interactPressed:hit('KeyE'),reloadPressed:hit('KeyR'),dodgePressed:hit('Space'),swapPressed:hit('Digit3'),weapon:hit('Digit1')?'gun':hit('Digit2')?'melee':null,heavyPressed:hit('KeyK'),sprint:ctl.sprint},playing,ctl.move);
+    if(combatDemo.crouched){ctl.move.x*=.48;ctl.move.z*=.48;ctl.sprint=false;}
+    if(combatDemo.state.mode==='dodging'||combatDemo.state.mode==='meleeWindup'||combatDemo.state.mode==='meleeRecovery')ctl.move={x:0,z:0};
+  }
   player.update(d, ctl);
   for (const e of ents) {
     if (e === player) continue;
@@ -454,7 +464,7 @@ function step(d) {
   if (!MOD.fly) separate(player);
   tickProjectiles(d);
   tickPickups(d, player, onPickup);
-  tickStory(d);
+  if (!combatDemo.active) tickStory(d);
   tickWanted(d);
   tickPlayerDown(d);
   tickWeather(d, sky.hour, time);
@@ -484,7 +494,7 @@ function step(d) {
   // ---------- world, camera, hud
   sky.update(d, player.pos, true, WX);
   tickWorld(d, player.pos);
-  orbit.update(d, player.pos, 1.45 + (player.veh ? 0.6 : 0), {
+  orbit.update(d, player.pos, (combatDemo.active&&combatDemo.crouched?.95:1.45) + (player.veh ? 0.6 : 0), {
     heading: player.veh ? player.veh.heading : player.heading,
     moving: playing && (player.veh ? Math.abs(player.veh.speed) > .5 : fw > 0 && rt === 0),
     vehicleDistance: player.veh ? (player.veh.def.car ? 6 : 4.5) : 0,
@@ -507,7 +517,7 @@ function step(d) {
 let spotsRef = null;
 import('./world/town.js').then((m) => (spotsRef = m.spawnSpots));
 function doSave() {
-  if (!player) return;
+  if (!player || combatDemo.active) return;
   const p = player.veh ? player.veh.pos : player.pos;
   save({ pos: { x: p.x, z: p.z }, heading: player.heading, hour: sky.hour, weather: WX.state });
 }
@@ -515,6 +525,7 @@ function tickWorld(d, focus) {
   tickStreet(d);
   rain?.update(camera.position, time, sky.isNight);
   grass?.update(focus, sky);
+  if(grass)grass.mesh.visible=!combatDemo.active;
   birds?.update(d, time);
   tickFx(d, focus, sky.isNight);
   const pw = scene.getObjectByName('paddyWater');
@@ -703,7 +714,7 @@ window.__ama = {
   enter(v) { enterVehicle(v); }, exit() { exitVehicle(); },
   info() { return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, ents: ents.length, veh: vehicles.length }; },
   story: () => import('./story.js'),
-  audio, camera, scene,
+  audio, camera, scene, combatDemo,
 };
 boot().then(() => requestAnimationFrame(frame)).catch((e) => { loadmsg.textContent = '載入失敗：' + e.message; console.error(e); });
 
@@ -711,8 +722,8 @@ const worldBindings=createWorldBindings();let worldSyncTimer=0,dashboardTimer=0;
 function openWorldDashboard(){unlock();openDevelopment({ui,e:G.economy,step:()=>economyRound(G.economy),save:doSave,navigate:navigateTo,teleport:teleportTo,recruit:recruitResidents,journal:()=>openJournal(ui,G.economy),enableCoins:()=>setCoinMode(G.economy,true),legacy:openLegacyEconomy,openShop:id=>districtScene.open(id),issue:()=>issueMoney(G.economy)});}
 function updateEconomyHUD(){
   let bar=document.getElementById('gameBar');
-  if(!bar){bar=document.createElement('div');bar.id='gameBar';bar.innerHTML='<button id="economyLiveHUD"></button><button id="districtButton">店铺</button><button id="governmentButton">政府</button><button id="worldLogButton">日志</button><button id="gameMenuToggle">菜单 ▾</button>';document.body.append(bar);bar.append(document.getElementById('displayTools'));const tools=document.querySelector('.touch-tools');if(tools)bar.append(tools);bar.querySelector('#economyLiveHUD').onclick=openWorldDashboard;bar.querySelector('#districtButton').onclick=()=>districtScene.open('shop');bar.querySelector('#governmentButton').onclick=()=>districtScene.open('civic');bar.querySelector('#worldLogButton').onclick=()=>{unlock();openJournal(ui,G.economy);};bar.querySelector('#gameMenuToggle').onclick=()=>bar.classList.toggle('expanded');}
-  bar.hidden=mode!=='play'||!!ui.open;const e=G.economy;
+  if(!bar){bar=document.createElement('div');bar.id='gameBar';bar.innerHTML='<button id="economyLiveHUD"></button><button id="districtButton">店铺</button><button id="governmentButton">政府</button><button id="worldLogButton">日志</button><button id="combatDemoButton">源核据点</button><button id="gameMenuToggle">菜单 ▾</button>';document.body.append(bar);bar.append(document.getElementById('displayTools'));const tools=document.querySelector('.touch-tools');if(tools)bar.append(tools);bar.querySelector('#economyLiveHUD').onclick=openWorldDashboard;bar.querySelector('#districtButton').onclick=()=>districtScene.open('shop');bar.querySelector('#governmentButton').onclick=()=>districtScene.open('civic');bar.querySelector('#worldLogButton').onclick=()=>{unlock();openJournal(ui,G.economy);};bar.querySelector('#combatDemoButton').onclick=()=>{if(combatDemo.active||!inputLocked()&&!dance.on&&!G.wanted){combatDemo.start();updateTouch();}else ui.toast(G.wanted?'请先摆脱追捕':'请先结束当前剧情');};bar.querySelector('#gameMenuToggle').onclick=()=>bar.classList.toggle('expanded');}
+  bar.hidden=mode!=='play'||!!ui.open;bar.querySelector('#combatDemoButton').textContent=combatDemo.active?'撤离据点':'源核据点';const e=G.economy;
   if(e.world?.rateFeedbackSummary&&e.world.feedbackDisplayed!==e.world.rateFeedbackSummary){ui.toast(e.world.rateFeedbackSummary);e.world.feedbackDisplayed=e.world.rateFeedbackSummary;}
   bar.querySelector('#economyLiveHUD').textContent=`经济 ${e.round}轮 · GDP NT$${e.metrics.gdp||0} · 1 GOD = NT$${exchangeRate(e)}`;
 }

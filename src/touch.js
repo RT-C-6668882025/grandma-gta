@@ -3,8 +3,8 @@ import { holdKey, mouse, resetInput } from './input.js';
 import { createTouchMotion, touchMove, stickSprint, touchLookDelta } from './touch-motion.js';
 export function initTouch(canvas, state) {
   const root = document.createElement('div'); root.id = 'touchControls'; root.hidden = true;
-  const primary = [['KeyJ','攻击'],['KeyE','互动'],['KeyG','投掷'],['KeyH','补药'],['Space','刹车']];
-  const secondary = [['KeyN','小镇经济'],['KeyV','飞行'],['PageUp','上升'],['PageDown','下降'],['KeyF','上下车'],['KeyQ','痞步'],['KeyR','电台'],['KeyX','抽烟'],['KeyB','槟榔'],['Space','骂人'],['KeyZ','视角回正']];
+  const primary = [['KeyJ','攻击'],['KeyE','互动'],['KeyG','投掷'],['KeyH','补药'],['Space','刹车'],['KeyR','换弹'],['KeyQ','扫描'],['ControlLeft','潜行'],['Digit3','切换']];
+  const secondary = [['Digit1','枪械'],['Digit2','近战'],['KeyK','重击'],['KeyN','小镇经济'],['KeyV','飞行'],['PageUp','上升'],['PageDown','下降'],['KeyF','上下车'],['KeyQ','痞步'],['KeyR','电台'],['KeyX','抽烟'],['KeyB','槟榔'],['Space','骂人'],['KeyZ','视角回正']];
   const buttons = actions => actions.map(([key,label])=>`<button type="button" data-key="${key}">${label}</button>`).join('');
   root.innerHTML = `<div class="touch-tools">${buttons([['Escape','存档 / 菜单'],['Tab','背包'],['KeyT','手机'],['KeyM','地图']])}<button type="button" id="touchToggle">触控：开</button><button type="button" id="touchMore" aria-controls="touchMorePanel" aria-expanded="false">操作设置</button></div><div class="touch-play"><div id="touchStick" aria-label="移动摇杆"><i></i><span class="stick-label">前推冲刺</span></div><button type="button" id="touchSprint" data-key="ShiftLeft">冲刺</button><div class="touch-actions">${buttons(primary)}</div><div id="touchMorePanel" class="touch-more" hidden>${buttons(secondary)}</div></div><div class="touch-dance">${buttons([['ArrowLeft','←'],['ArrowUp','↑'],['ArrowDown','↓'],['ArrowRight','→']])}</div><div class="rotate-hint">横屏游玩 · 左手移动 · 右手滑动视角</div>`;
   document.body.append(root);
@@ -87,9 +87,13 @@ export function initTouch(canvas, state) {
   return () => {
     const s = state(); motion.snap = !s.driving;
     if (wasPlaying && !s.playing) release(); wasPlaying = s.playing;
-    root.hidden = !enabled || !s.active; root.classList.toggle('controls-off',!controls); root.classList.toggle('blocked',!s.playing); root.classList.toggle('dancing',s.dancing);
+    root.hidden = !enabled || !s.active; root.classList.toggle('controls-off',!controls); root.classList.toggle('blocked',!s.playing); root.classList.toggle('dancing',s.dancing);root.classList.toggle('combat-mode',!!s.combat);
     if (wasDriving !== !!s.driving) { wasDriving = !!s.driving; stopSprint(); root.classList.toggle('driving',wasDriving); }
     root.querySelector('.touch-actions [data-key="KeyE"]').textContent = s.driving ? '下车' : s.interaction || '互动';
+    for(const [key,label] of [['KeyG',s.combat?'瞄准 / 格挡':'投掷'],['Space',s.combat?'闪避':'刹车'],['KeyE',s.combat?'操作 / 处置':s.driving?'下车':s.interaction||'互动']]){const button=root.querySelector('.touch-actions [data-key="'+key+'"]');if(button)button.textContent=label;}
+    for(const key of ['KeyR','Digit1','Digit2','KeyQ','KeyK','ControlLeft','Digit3']){const button=root.querySelector('.touch-actions [data-key="'+key+'"]');if(button)button.hidden=!s.combat;}
+    for(const key of ['Digit1','Digit2','KeyK','KeyQ','KeyR','Space']){const button=root.querySelector('.touch-more [data-key="'+key+'"]');if(button)button.hidden=['Digit1','Digit2','KeyK'].includes(key)?!s.combat:!!s.combat;}
+    for(const [key,label] of [['ControlLeft',s.crouched?'起身':'潜行'],['KeyQ',s.scanning?'退出扫描':'扫描']]){const button=root.querySelector('.touch-actions [data-key="'+key+'"]');if(button)button.textContent=label;}
     document.body.classList.toggle('touch-device',enabled&&s.active);
     document.body.classList.toggle('touch-layout',enabled&&controls&&s.active);
   };

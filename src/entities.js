@@ -79,16 +79,16 @@ export class Ent {
     return d;
   }
   integrate(dt) {
-    if (this.role === 'player' && MOD.fly && !this.veh) {
+    if (this.role === 'player' && MOD.fly && !this.veh && !this.combatFloorOffset) {
       const p = flightPosition(this.pos, this.vel, this.flightAxis || 0, dt, heightAt, BOUND);
       this.pos.set(p.x,p.y,p.z); this.wading = false; return;
     }
     this.pos.x += this.vel.x * dt; this.pos.z += this.vel.z * dt;
     const [x, z] = resolve(this.pos.x, this.pos.z, this.r, this.pos.y);
     this.pos.x = clamp(x, -BOUND, BOUND); this.pos.z = clamp(z, -BOUND, BOUND);
-    const g = heightAt(this.pos.x, this.pos.z);
+    const g = heightAt(this.pos.x, this.pos.z) + (this.combatFloorOffset || 0);
     this.pos.y = damp(this.pos.y, g, 20, dt);
-    this.wading = !!isPaddy(this.pos.x, this.pos.z);
+    this.wading = !this.combatFloorOffset && !!isPaddy(this.pos.x, this.pos.z);
   }
   // damage from someone (att may be null)
   takeHit(att, dmg, o = {}) {
@@ -247,7 +247,7 @@ export class Player extends Ent {
     if (busy && a.cur && ['jab', 'cross', 'kick', 'swing', 'throw'].includes(a.cur.name)) speed *= 0.25;
     if (a.cur && ['phone', 'lift', 'dance', 'angry', 'complain'].includes(a.cur.name)) speed = 0;
     if (down) speed = 0;
-    if (MOD.fly) {
+    if (MOD.fly && !ctl.combatMode) {
       if (mag > 0.1 && !down) this.heading = dampAngle(this.heading, Math.atan2(mv.x, mv.z), 12, dt);
       this.vel.x = damp(this.vel.x, mag > 0.1 ? Math.sin(this.heading) * speed : 0, 10, dt);
       this.vel.z = damp(this.vel.z, mag > 0.1 ? Math.cos(this.heading) * speed : 0, 10, dt);
@@ -255,7 +255,7 @@ export class Player extends Ent {
       const motion = stepLocomotion(this.heading, this.vel.x, this.vel.z, mv.x, mv.z, speed, dt);
       this.heading = motion.heading; this.vel.x = motion.vx; this.vel.z = motion.vz;
     }
-    this.stamina = clamp(this.stamina + (sprint ? -14 : 9 * (G.flags.smoking ? 1.6 : 1)) * dt, 0, 100);
+    if (!ctl.combatMode) this.stamina = clamp(this.stamina + (sprint ? -14 : 9 * (G.flags.smoking ? 1.6 : 1)) * dt, 0, 100);
     this.flightAxis = ctl.flyAxis || 0;
     const startX = this.pos.x, startZ = this.pos.z;
     this.integrate(dt);
@@ -276,7 +276,7 @@ export class Player extends Ent {
     }
     if (this.betelT > 0) { this.betelT -= dt; if (this.betelT <= 0) { const m = a.headPos(_v); m.addScaledVector(a.fwdAxis(), 0.15); emit('fx', 'spit', m); emit('sfx', 'spit', this.pos); } }
     this.place();
-    a.groundLocomotion = !MOD.fly && !down;
+    a.groundLocomotion = (!MOD.fly || ctl.combatMode) && !down;
     if (a.groundLocomotion) a.speed = groundSpeed(this.pos.x - startX, this.pos.z - startZ, dt, Math.hypot(this.vel.x, this.vel.z));
     this.updateActor(dt);
   }

@@ -331,3 +331,30 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #111; color:
 #gameBar{flex-wrap:wrap;max-height:40vh;overflow:auto}#gameBar #economyLiveHUD{flex:1;min-width:90px}
 
 #title .logo span{font-size:clamp(18px,4vw,42px);max-width:88vw;line-height:1.2}
+#combatDemoHUD { pointer-events:none; position:fixed; inset:0; z-index:12; }
+#combatDemoHUD[hidden] { display:none; }
+.combat-crosshair { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); color:#e8fff5; font-size:24px; text-shadow:0 1px 3px #000; }
+.combat-readout { position:absolute; left:50%; top:15%; transform:translateX(-50%); max-width:80vw; padding:8px 12px; border:1px solid #8acbbd; border-radius:8px; background:#0b171ce0; color:#e8fff5; font-size:12px; }
+#touchControls button[hidden] { display:none!important; }
+.touch-layout #touchControls.combat-mode .touch-actions { width:280px; height:240px; }
+.touch-layout #touchControls.combat-mode .touch-actions [data-key="KeyJ"] { right:24px; bottom:80px; }
+.touch-layout #touchControls.combat-mode .touch-actions [data-key="KeyG"] { right:104px; bottom:0; }
+.touch-layout #touchControls.combat-mode .touch-actions [data-key="KeyE"] { right:184px; bottom:0; }
+.touch-layout #touchControls.combat-mode .touch-actions [data-key="Space"] { display:block; width:58px; height:58px; right:24px; bottom:0; }
+.touch-layout #touchControls.combat-mode .touch-actions [data-key="KeyR"] { right:184px; bottom:80px; }
+.touch-layout #touchControls.combat-mode .touch-actions [data-key="KeyQ"] { right:184px; bottom:172px; }
+.touch-layout #touchControls.combat-mode .touch-actions [data-key="KeyH"] { display:none; }
+.combat-active #objective,.combat-active #prompt,.combat-active #help,.combat-active #keys,.combat-active #weaponBox { display:none; }
+.combat-hitmark { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); color:#ffda9b; font-size:40px; opacity:0; }
+.combat-objective { position:absolute; left:50%; top:22%; transform:translateX(-50%); max-width:74vw; background:#12212ce8; padding:7px 12px; border-radius:6px; font-size:13px; }
+.combat-target { position:absolute; left:50%; bottom:12%; transform:translateX(-50%); max-width:65vw; padding:6px 10px; background:#12212ce0; font-size:12px; }
+.combat-damage { position:absolute; inset:0; opacity:0; box-shadow:inset 0 0 70px #ed4935aa; }
+.combat-upgrades { position:absolute; left:50%; top:32%; transform:translateX(-50%); display:flex; flex-wrap:wrap; justify-content:center; gap:8px; max-width:80vw; width:480px; padding:12px; background:#11212bf5; border:1px solid #8acbbd; border-radius:10px; pointer-events:auto; }
+.combat-upgrades[hidden] { display:none; }
+.combat-upgrades b { flex:1 0 100%; text-align:center; }
+.combat-upgrades button { min-height:58px; padding:8px; border:1px solid #8acbbd; border-radius:7px; color:#eafff5; background:#243b45; cursor:pointer; }
+.combat-upgrades button small { display:block; margin-top:4px; font-size:11px; }
+.combat-upgrades button:disabled { opacity:.5; cursor:default; }
+.touch-layout #touchControls.combat-mode .touch-actions [data-key="ControlLeft"] { right:104px; bottom:172px; }
+.touch-layout #touchControls.combat-mode .touch-actions [data-key="Digit3"] { right:24px; bottom:172px; }
+@media(max-height:500px) { .combat-target { bottom:10px; max-width:45vw; font-size:10px; } .combat-objective { font-size:11px; top:24%; } .combat-readout { font-size:10px; max-width:72vw; } .combat-upgrades { top:32%; } }
