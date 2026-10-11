@@ -27,3 +27,27 @@ test('every urban plot has a central lane and perimeter connection without chang
  }
  assert.equal(L.LOOPS.length,4);
 });
+const N=await import(url(await readFile(new URL('../src/map-navigation.js',import.meta.url),'utf8')));
+test('each district has one distinct public hub with an unobstructed mapped entrance',()=>{
+ const hubs=U.districtDestinations();assert.equal(hubs.length,3);assert.equal(new Set(hubs.map(h=>h.region)).size,3);
+ for(const h of hubs){const p=U.urbanBlocks().find(p=>p.hub===h.id);assert.equal(p.buildings.length,0);assert.deepEqual({x:h.x,z:h.z},p.entry);assert.equal(h.category,'place');assert.equal(R.regionAt(h.x).id,h.region);}
+});
+test('district hub navigation follows the joined road graph rather than falling back to a straight line',()=>{
+ const start={x:-190,z:62};
+ for(const end of U.districtDestinations()){
+  const path=N.roadRoute(L.ROADS,start,end);assert.ok(path.length>3,end.label);assert.deepEqual(path[0],start);assert.equal(path.at(-1).x,end.x);assert.equal(path.at(-1).z,end.z);
+  const buildings=U.urbanBlocks().flatMap(p=>p.buildings);
+  for(let i=1;i<path.length;i++){
+   const a=path[i-1],b=path[i],steps=Math.ceil(N.distance(a,b)/.5);
+   for(let n=0;n<=steps;n++){const t=steps?n/steps:0,x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t;
+    assert.ok(!buildings.some(q=>Math.abs(x-q.x)<q.w/2+.3&&Math.abs(z-q.z)<q.d/2+.3),end.label+' route intersects a building');
+   }
+  }
+ }
+});
+
+test('teleport destination uses the closest road point even when route simplification removes the final duplicate',()=>{
+ for(const h of U.districtDestinations()){const p=N.nearestRoadPoint(L.ROADS,h);assert.ok(N.distance(p,h)<1e-6);}
+ const road=[{pts:[[0,0],[100,0]]}];assert.deepEqual(N.nearestRoadPoint(road,{x:90,z:3}),{x:90,z:0});
+ assert.equal(N.nearestRoadPoint(road,{x:NaN,z:0}),null);assert.equal(N.nearestRoadPoint([],{x:0,z:0}),null);
+});

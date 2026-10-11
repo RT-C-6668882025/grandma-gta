@@ -82,6 +82,15 @@ for(const [i,p] of PADDIES.entries())if(p.urban){
  ROADS.push({name:'街坊步道 '+i,urban:true,kind:'lane',w:3,pts:[[x,p.z0-.7],[x,p.z1+.7]]});
  ROADS.push({name:'街坊连廊 '+i,urban:true,kind:'lane',w:2.5,pts:[[p.x0-.7,p.z1+.7],[p.x1+.7,p.z1+.7]]});
 }
+for(const p of PADDIES)if(p.urban&&p.x0>-31&&p.x1<194&&Math.abs(p.z0-.7-70)<.001){const x=(p.x0+p.x1)/2;ROADS.push({name:'南城入口',urban:true,kind:'lane',w:3,pts:[[x,62],[x,70]]});}
+// Public promenades join the plot grids to the existing street network.
+for(const [name,pts] of [
+ ['西园漫步道',[[-292,70],[-190,70],[-190,62]]],
+ ['南庭连廊',[[-190,70],[-190,118],[-48,118]]],
+ ['西园北廊',[[-292,-60],[-230,-60],[-230,-40]]],
+ ['北庭步道',[[70,-140],[200,-140]]]
+])ROADS.push({name,urban:true,kind:'lane',w:3,pts});
+for(const z of [...new Set(PADDIES.filter(p=>p.urban&&p.x0>=210).flatMap(p=>[p.z0-.7,p.z1+.7]).map(z=>Number(z.toFixed(4))))])ROADS.push({name:'东埠横廊',urban:true,kind:'lane',w:3,pts:[[200,z],[292,z]]});
 export const PADDY_Y = -0.42, WATER_Y = -0.16;
 
 // vegetable garden next to home (harvestable cabbages)

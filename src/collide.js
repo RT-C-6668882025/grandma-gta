@@ -114,3 +114,6 @@ export function segmentBlock(ax, ay, az, bx, by, bz) {
 }
 
 export function colliderCount() { return all.length; }
+
+// Read-only obstacle snapshots for navigation diagnostics and scene verification.
+export function staticObstacles(x,z,r=1){const out=[];nearby(x,z,r,c=>out.push({...c}));return out;}

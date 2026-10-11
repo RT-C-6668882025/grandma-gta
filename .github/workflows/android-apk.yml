@@ -53,14 +53,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v1.18-urban >/dev/null 2>&1; then exit 0; fi
+          if gh release view v1.19-centers >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
           手机 / 平板通用版 · Android 8.0+，固定签名，可覆盖安装稳定版。
-          三区整体改造首轮：142 个外围街坊，澄湾 41、榆庭 52、东埠 49；规划面积仍为 30% / 45% / 25%。
-          澄湾：低层玻璃园区、屋顶温室、简洁导视与绿地；榆庭：石材院落、坡屋顶、拱形门框、工艺社与座椅；东埠：密集高楼、开放工坊、外露设备与廉价霓虹。
-          新增步道、连廊、居民活动点和座椅；地块抬平并移除旧水面与稻苗，修复城市地块仍被判定涉水的问题。
-          原地块账户与农业产出保留，名称更新为科创园、生活院和试造坊，农业表现为楼内/屋顶培育。经济资金与源核据点兼容。
-          160 项自动测试通过；三区碰撞与入口、三条战斗路线、成长存档、手机和平板布局完成浏览器验证。
-          本轮为程序建筑与街景首版，原章节、特殊地标和部分旧设施保留。采用分块合并几何；手机和平板性能仍需实机验证。
+          新增三个公共中心：东埠样机集市、榆庭公庭、澄湾开放园，分别布置样机摊位、喷泉与露台、光伏廊架与展示装置。
+          地图新增公共空间分类，支持搜索、导航、瞬移，目的地介绍保留在选中提示中。
+          街坊路网连上原道路；避开旧设施，移除新步道交叉口的自动电线杆，改用专门布置的街坊路灯。
+          公共中心加入座椅和居民活动点；原街坊数量、三区面积比例、地块账户和农业生产规则保持兼容。
+          163 项自动测试通过；浏览器验证三个中心的路线碰撞、入口、地图搜索和瞬移。
+          公共中心为程序场景首版；样机展示、咖啡露台和展示装置目前是环境设施，未增加购买或科技研发玩法。实机性能仍需验证。
           NOTES
-          gh release create v1.18-urban android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 1.18 · 三区街坊' --notes-file notes.md
+          gh release create v1.19-centers android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 1.19 · 街区中心' --notes-file notes.md

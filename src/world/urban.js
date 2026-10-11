@@ -1,3 +1,4 @@
+import {buildDistrictHub} from './urban-hubs.js';
 import {Kit,drawSign} from './kit.js';
 import {urbanBlocks,URBAN_NAMES} from './urban-plan.js';
 import {heightAt} from './terrain.js';
@@ -8,6 +9,7 @@ export function buildUrbanDistricts(scene,{spawnSpots,seats,lamps}){
   const key=p.region+':'+Math.floor(p.x/64)+':'+Math.floor(p.z/64);
   if(!batches.has(key))batches.set(key,new Kit(9000+Number(p.id.split(':')[1])));
   const k=batches.get(key),east=p.region==='dongbu',west=p.region==='chengwan';
+  if(p.hub){buildDistrictHub(k,p,{spawnSpots,seats,lamps});continue;}
   const stone=west?0xd9e2df:east?0x777e83:0xd9cbb8,metal=west?0x536b69:east?0x353b42:0x4a514b;
   const box=(x,y,z,w,h,d,c,o={})=>k.box(x,y,z,w,h,d,c,0,o);
   for(const [bi,b] of p.buildings.entries()){

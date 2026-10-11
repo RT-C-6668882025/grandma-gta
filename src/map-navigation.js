@@ -2,6 +2,11 @@
 export const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 function project(p,a,b){const dx=b.x-a.x,dz=b.z-a.z,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.z-a.z)*dz)/(dx*dx+dz*dz||1)));return {x:a.x+dx*t,z:a.z+dz*t,t};}
 function cross(a,b,c,d){const ux=b.x-a.x,uz=b.z-a.z,vx=d.x-c.x,vz=d.z-c.z,det=ux*vz-uz*vx;if(Math.abs(det)<1e-9)return null;const t=((c.x-a.x)*vz-(c.z-a.z)*vx)/det,u=((c.x-a.x)*uz-(c.z-a.z)*ux)/det;return t>=0&&t<=1&&u>=0&&u<=1?{x:a.x+t*ux,z:a.z+t*uz}:null;}
+export function nearestRoadPoint(roads,point){
+ if(![point.x,point.z].every(Number.isFinite))return null;
+ let best=null;for(const road of roads)for(let i=1;i<road.pts.length;i++){const a={x:road.pts[i-1][0],z:road.pts[i-1][1]},b={x:road.pts[i][0],z:road.pts[i][1]},q=project(point,a,b),d=distance(point,q);if(!best||d<best.d)best={x:q.x,z:q.z,d};}
+ return best?{x:best.x,z:best.z}:null;
+}
 export function roadRoute(roads,start,end){
   if(![start.x,start.z,end.x,end.z].every(Number.isFinite))return [];
   const segments=[];for(const road of roads)for(let i=1;i<road.pts.length;i++){const a={x:road.pts[i-1][0],z:road.pts[i-1][1]},b={x:road.pts[i][0],z:road.pts[i][1]};segments.push({a,b,points:[a,b]});}

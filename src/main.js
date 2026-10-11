@@ -1,3 +1,4 @@
+import {districtDestinations} from './world/urban-plan.js';
 import {createCombatDemo} from './combat-demo.js';
 import {regionAt,regionMarkers} from './city-regions.js';
 import { combatActions, contextAction } from './control-actions.js';
@@ -11,7 +12,7 @@ import {openDevelopment} from './economy-dashboard.js';
 import {INDUSTRIES,ensureIndustries,investIndustry,exchange,exchangeRate,toCoins,fiatPrice,shopCurrency} from './town-currency.js';
 import {populate,chooseJobs,JOB_LABELS} from './residents.js';
 import {createResidentScene,MINE,residentTarget} from './resident-scene.js';
-import {roadRoute,distance,routeLength} from './map-navigation.js';
+import {roadRoute,nearestRoadPoint,distance,routeLength} from './map-navigation.js';
 import { placeOrder, cancelOrder, setCryptoEnabled, marketRound, totalCoins, mintCoins } from './crypto-market.js';
 import { accountLabel, transfer, event, decision } from './economy-ledger.js';
 import { GOODS, price as economyPrice, totalMoney, tickEconomy, economyRound, pickupCargo, deliverCargo, issueMoney, setCoinMode } from './economy.js';
@@ -309,7 +310,7 @@ const residentScene=createResidentScene({ground:heightAt});
 let navigationTimer=0;
 function navigateTo(target,silent=false){if(target.category!=='region'&&!target.label?.includes('区 · '))target={...target,label:regionAt(target.x,target.z).name+' · '+(target.label||'目的地')};if(![target.x,target.z].every(Number.isFinite))return;const path=roadRoute(ROADS,player.pos,target);drawRoute(path);if(!silent)event(G.economy,'导航','前往 '+(target.label||'目的地'));G.navigation={x:target.x,z:target.z,label:target.label||'目的地'};ui.navigation={...G.navigation,path};navigationHint.hidden=false;navigationHint.textContent=G.navigation.label+' · 路線 '+Math.round(routeLength(path))+' m';return ui.navigation;}
 function clearNavigation(){delete G.navigation;ui.navigation=null;navigationHint.hidden=true;routeDots.count=0;destination.visible=false;}
-ui.mapData=()=>({markers:[...regionMarkers(),...(G.economy.world?.places||[]).filter(d=>d.kind!=='archive').map(d=>({...d,label:d.name,category:'shop',color:'#93cbbd'})),...G.economy.households.filter(h=>h.active&&h.location).map(h=>({...h.location,label:h.name,category:'resident',color:'#80dfff'})),...(G.navigation?[{...G.navigation,category:'destination',color:'#ffdd44'}]:[]),...Object.entries({shop:'柑仔店',hardware:'五金行',clinic:'診所',market:'菜市場 / 領貨',cloth:'夜市衣攤',recycle:'回收場',betel:'檳榔攤'}).map(([id,label])=>({...P[id],id,label,category:'shop',color:'#f2c230'})),{...MINE,label:'算力中心 / 挖礦',category:'job',color:'#cc8bff'},{...P.shop,label:'送貨交貨點',category:'job',color:'#f2c230'},...Object.entries({home:'阿嬤家',police:'派出所',temple:'媽祖廟',station:'車站',school:'國小',banyan:'大榕樹'}).map(([id,label])=>({...P[id],label,category:'place',color:'#c7d8e0'})),...residentScene.markers(G.economy),...blips.map(b=>({...b,label:b.label||'任務',category:'mission'}))].map(m=>({...m,label:m.category==='region'?m.label:regionAt(m.x,m.z).name+' · '+m.label})),navigation:ui.navigation,onNavigate:navigateTo,onTeleport:teleportTo,onClear:clearNavigation});
+ui.mapData=()=>({markers:[...regionMarkers(),...districtDestinations(),...(G.economy.world?.places||[]).filter(d=>d.kind!=='archive').map(d=>({...d,label:d.name,category:'shop',color:'#93cbbd'})),...G.economy.households.filter(h=>h.active&&h.location).map(h=>({...h.location,label:h.name,category:'resident',color:'#80dfff'})),...(G.navigation?[{...G.navigation,category:'destination',color:'#ffdd44'}]:[]),...Object.entries({shop:'柑仔店',hardware:'五金行',clinic:'診所',market:'菜市場 / 領貨',cloth:'夜市衣攤',recycle:'回收場',betel:'檳榔攤'}).map(([id,label])=>({...P[id],id,label,category:'shop',color:'#f2c230'})),{...MINE,label:'算力中心 / 挖礦',category:'job',color:'#cc8bff'},{...P.shop,label:'送貨交貨點',category:'job',color:'#f2c230'},...Object.entries({home:'阿嬤家',police:'派出所',temple:'媽祖廟',station:'車站',school:'國小',banyan:'大榕樹'}).map(([id,label])=>({...P[id],label,category:'place',color:'#c7d8e0'})),...residentScene.markers(G.economy),...blips.map(b=>({...b,label:b.label||'任務',category:'mission'}))].map(m=>({...m,label:m.category==='region'?m.label:regionAt(m.x,m.z).name+' · '+m.label})),navigation:ui.navigation,onNavigate:navigateTo,onTeleport:teleportTo,onClear:clearNavigation});
 const clock = new THREE.Clock();
 let prNow = prMax, frAcc = 0, frN = 0;
 let touchInteraction = '互动';
@@ -736,7 +737,7 @@ function drawRoute(path){
 }
 function teleportTo(target){
  if(![target.x,target.z].every(Number.isFinite))return false;
- const path=roadRoute(ROADS,player.pos,target),p=path.length>2?path[path.length-2]:target;
+ const p=nearestRoadPoint(ROADS,target)||target;
  if(player.veh)exitVehicle();const [x,z]=resolve(Math.max(-330,Math.min(330,p.x)),Math.max(-330,Math.min(330,p.z)),player.r,heightAt(p.x,p.z));
  player.pos.set(x,heightAt(x,z),z);player.vel?.set(0,0,0);orbit.recenter(player.heading);ui.close();navigateTo(target);event(G.economy,'导航','瞬移至 '+(target.label||'目的地')+' 附近道路');doSave();return true;
 }

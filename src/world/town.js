@@ -341,7 +341,7 @@ function buildPoles(scene) {
   }
   // other roads: one side, every 34 m
   for (const r of ROADS) {
-    if (r.kind === 'main') continue;
+    if (r.kind === 'main' || r.urban) continue;
     for (let s = 0; s < r.pts.length - 1; s++) {
       const [ax, az] = r.pts[s], [bx, bz] = r.pts[s + 1];
       const L = Math.hypot(bx - ax, bz - az), dx = (bx - ax) / L, dz = (bz - az) / L;
@@ -800,7 +800,7 @@ function buildNature(scene) {
   seats.push([P.banyan.x + 3, P.banyan.z + 4.2, Math.PI], [P.banyan.x + 3, P.banyan.z + 1.8, 0], [P.banyan.x + 1.8, P.banyan.z + 3, Math.PI / 2]);
   // roadside trees along the field roads and lanes
   for (const r of ROADS) {
-    if (r.kind === 'main') continue;
+    if (r.kind === 'main' || r.urban) continue;
     for (let s = 0; s < r.pts.length - 1; s++) {
       const [ax, az] = r.pts[s], [bx, bz] = r.pts[s + 1];
       const L = Math.hypot(bx - ax, bz - az), dx = (bx - ax) / L, dz = (bz - az) / L;
