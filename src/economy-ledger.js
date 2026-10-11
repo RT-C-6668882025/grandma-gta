@@ -15,13 +15,16 @@ export const accountLabel=owner=>({player:'阿嬤',bank:'公庫 / 兌換池',pro
 
 export function event(e,type,message,details={}){
   e.events ||= [];e.eventSerial=(e.eventSerial||0)+1;
+  const owner=[details.to,details.from].find(o=>o?.startsWith('i:'));const industry=details.industry||owner?.slice(2),place=e.world?.places.find(d=>d.id===industry);
+  if(place)details={location:place.entrance||{x:place.x,z:place.z},industry,decisionId:type==='决策'?undefined:e.industries[industry]?.lastDecisionId,...details};
   const row={id:e.eventSerial,round:e.round,type,message,...details};
   e.events.unshift(row);if(e.events.length>10000)e.events.length=10000;return row;
 }
-export function decision(e,message){
-  const row=event(e,'决策',message);
-  e.pendingDecisions ||= [];e.pendingDecisions.push({id:row.id,round:e.round,message,workers:e.metrics.workers||0,gdp:e.metrics.gdp||0,production:e.metrics.production||0});
+export function decision(e,message,details={}){
+  const row=event(e,'决策',message,details);
+  e.pendingDecisions ||= [];e.pendingDecisions.push({id:row.id,round:e.round,message,workers:e.metrics.workers||0,gdp:e.metrics.gdp||0,production:e.metrics.production||0,...details});
   e.pendingDecisions=e.pendingDecisions.slice(-50);
+  return row;
 }
 export function issueTo(e,currency,owner,amount){
   if(typeof owner!=='string'||!['ntd','beta'].includes(currency)||!Number.isSafeInteger(amount)||amount<1||amount>1000000)return false;

@@ -18,14 +18,26 @@ Android 手机 / 平板 · 开放世界 · NT$ / GOD 双货币 · 实时经济 �
 
 ## 下载与安装
 
-**当前版本：1.10 · 触控 / 导航 / 决策日志**
+**当前版本：1.11 · 可交互经济街区**
 
-[直接下载手机 / 平板通用 APK（约 57 MB）](https://github.com/RT-C-6668882025/grandma-gta/releases/download/v1.10.0-controls/grandma-gta-phone-tablet.apk) · [发布说明](https://github.com/RT-C-6668882025/grandma-gta/releases/tag/v1.10.0-controls)
+[直接下载手机 / 平板通用 APK（约 57 MB）](https://github.com/RT-C-6668882025/grandma-gta/releases/download/v1.11.0-district/grandma-gta-phone-tablet.apk) · [发布说明](https://github.com/RT-C-6668882025/grandma-gta/releases/tag/v1.11.0-district)
 
 - Android 8.0 及以上，系统 WebView 需支持 WebGL、ES Modules 和 import maps。
 - 同一个安装包适配手机和平板。游戏与模型包含在 APK 内，支持离线游玩。
 - 当前使用个人测试签名，不同构建可能无法覆盖安装。**卸载会清除本地存档与设置**，不要把卸载当作无损更新。
-- 1.10 已通过 107 项自动测试和 APK 构建；不同设备的帧率、触控手感与完整任务流程仍需真机验证。
+- 1.11 已通过 110 项自动测试和 APK 构建；不同设备的帧率、触控手感与完整任务流程仍需真机验证。
+
+## 1.11：先走进一个经济街区
+
+点击顶部 **「街区」**，选择店铺。经营卡显示资金、库存、到岗员工、通勤人数、前来消费的人数和工资；可直接注资、调整每人工资、开停业、导航或查看该店日志。
+
+在街上，店铺标牌显示营业、缺货或停业，门前货箱数量跟随库存。标牌可点击，附近同时最多显示三个，减少遮挡。
+
+试验街区的步行员工需要抵达店口，才领取当轮工资并参与生产；顾客沿道路到店后才付款、减少库存和完成消费。资金不足、未到岗、停业、缺货分别产生不同结果，受伤或战斗优先。
+
+**「日志」仍叫日志。** 店铺操作带有决策编号，相关收支和事件保留关联与地点，可点击「前往现场」。原有全镇轮次对比仍属于同期变化，不代表唯一因果。
+
+本次只把选定街区接入到店循环，其余产业继续采用原规则。还没有扩展为全地图逐人到岗或完整交通物流仿真。
 
 ## 现在能玩什么
 
@@ -154,6 +166,7 @@ python3 tools/serve.py
 
 | 模块 | 文件 |
 | --- | --- |
+| 试验街区规则与场景交互 | `src/district.js`、`src/district-scene.js` |
 | 经济控制台 | `src/economy-dashboard.js` |
 | 行业模拟与场景绑定 | `src/world-economy.js`、`src/world-bindings.js` |
 | 账户、增发与事件记录 | `src/economy-ledger.js` |

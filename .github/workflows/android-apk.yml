@@ -35,16 +35,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v1.10.0-controls >/dev/null 2>&1; then exit 0; fi
+          if gh release view v1.11.0-district >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
           手机 / 平板通用版 · Android 8.0+。
-          统一顶部菜单，移除叠加工具条。左侧八方向摇杆、右侧弧形动作按钮；视角灵敏度默认 35%，菜单 → 更多可调整并保存。
-          GOD 替代 BETA 名称，旧存档兼容。顶部显示游戏 GDP（最终消费口径，排除批发、换汇和资产转手）。
-          默认 160 名实际场景居民，可每次新增 32 人，上限 240；有资金的企业招聘，资金不足仍会停工。
-          导航显示地图目标、小地图边缘标记、地面连续圆点与目的地光柱。可瞬移到目标附近道路，再按引导抵达。
-          日志作为独立入口：决策、下一轮变化、收支、就业、产业、游戏事件。随存档保留最近 10000 条，支持全选复制。
-          NT$ / GOD 可定向增发至玩家、公库、指定居民、产业或资产专项账户；增发与已有资金注资分开。
-          107 项自动测试通过。完整 Android 真机操作手感待验收。
+          新增「街区」入口：试验店铺经营卡可切换店铺、注资、调整每人工资、开停业、导航和查看日志。
+          街区店铺显示可点击的营业 / 缺货 / 停业标牌，门前货箱数量随真实库存变化。
+          试验街区的步行员工到店后才领取当轮工资并生产；前来消费的居民沿道路赴店，抵达后才付款和扣库存。战斗或受伤期间暂停到店消费。
+          「日志」名称保持不变；店铺操作、收支和后续事件关联决策编号，可直接前往事件发生地点。
+          此版先实现一个街区的循环，其他产业沿用原模拟规则。保留 GOD / NT$、定向增发、160 人场景和触控布局。
+          110 项自动测试通过。完整真机体验仍待验证。
           个人测试签名可能与旧版不同，卸载会清除存档。
           NOTES
-          gh release create v1.10.0-controls android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 手机 / 平板通用版 1.10 · 触控 / 导航 / 决策日志' --notes-file notes.md
+          gh release create v1.11.0-district android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 手机 / 平板通用版 1.11 · 可交互经济街区' --notes-file notes.md

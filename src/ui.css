@@ -304,3 +304,5 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #111; color:
 #touchControls .touch-actions button{border-radius:50%}
 #gameBar.expanded{max-height:45vh;overflow:auto}#gameBar.expanded #displayTools,#gameBar.expanded .touch-tools{flex:1 0 100%;justify-content:center}
 .touch-actions [data-key="KeyE"]{right:60%;bottom:12%}.touch-actions [data-key="KeyG"]{right:26%;bottom:0}
+
+.shop-world-label{position:fixed;transform:translate(-50%,-100%);z-index:7;background:#163c2ee8;color:#eaffed;border:1px solid #7cda9d;border-radius:9px;padding:7px 10px;max-width:200px;font:12px var(--sans);pointer-events:auto}.shop-world-label[hidden]{display:none}.shop-world-label[data-state="已停业"],.shop-world-label[data-state="资金不足"]{background:#531e24e8;border-color:#ec8b8b}.shop-world-label[data-state="缺货"]{background:#604212e8;border-color:#f4c267}

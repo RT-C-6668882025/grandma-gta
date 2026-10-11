@@ -1,3 +1,5 @@
+import {initDistrict} from './district.js';
+import {createDistrictScene} from './district-scene.js';
 import {openJournal} from './event-journal.js';
 import {resolve} from './collide.js';
 import {economyPlaces} from './world/town.js';
@@ -139,6 +141,7 @@ async function start(cont) {
   applyPowers(player, G);
   await initStory(ctx);
   worldBindings.init(G.economy,economyPlaces,economyEquipment);
+  initDistrict(G.economy,ROADS);
   if(G.economy.round===0)G.economy.metrics.workers=0;
   worldBindings.sync(G.economy,ents,vehicles,animals,player);
   chooseJobs(G.economy);
@@ -340,7 +343,7 @@ function step(d) {
   worldSyncTimer+=d;if(worldSyncTimer>=1){worldSyncTimer=0;worldBindings.sync(G.economy,ents,vehicles,animals,player);}
   residentScene.sync(G.economy,ents);
   if ((!ui.open||ui.developmentLive) && !document.hidden && !inputLocked() && !dance.on && !player.down) tickEconomy(G.economy,d);
-  dashboardTimer+=d;if(dashboardTimer>=.25){dashboardTimer=0;ui.developmentRefresh?.();updateEconomyHUD();}
+  dashboardTimer+=d;if(dashboardTimer>=.25){dashboardTimer=0;ui.developmentRefresh?.();updateEconomyHUD();districtScene.update(player);}
   navigationTimer+=d;
   if(G.navigation&&navigationTimer>2){navigationTimer=0;if(distance(player.pos,G.navigation)<6){ui.toast('已到達：'+G.navigation.label);clearNavigation();}else navigateTo(G.navigation,true);}
   // ---------- global keys
@@ -692,7 +695,7 @@ const worldBindings=createWorldBindings();let worldSyncTimer=0,dashboardTimer=0;
 function openWorldDashboard(){unlock();openDevelopment({ui,e:G.economy,step:()=>economyRound(G.economy),save:doSave,navigate:navigateTo,teleport:teleportTo,recruit:recruitResidents,journal:()=>openJournal(ui,G.economy),enableCoins:()=>setCoinMode(G.economy,true),legacy:openLegacyEconomy,issue:()=>issueMoney(G.economy)});}
 function updateEconomyHUD(){
   let bar=document.getElementById('gameBar');
-  if(!bar){bar=document.createElement('div');bar.id='gameBar';bar.innerHTML='<button id="economyLiveHUD"></button><button id="worldLogButton">日志</button><button id="gameMenuToggle">菜单 ▾</button>';document.body.append(bar);bar.append(document.getElementById('displayTools'));const tools=document.querySelector('.touch-tools');if(tools)bar.append(tools);bar.querySelector('#economyLiveHUD').onclick=openWorldDashboard;bar.querySelector('#worldLogButton').onclick=()=>{unlock();openJournal(ui,G.economy);};bar.querySelector('#gameMenuToggle').onclick=()=>bar.classList.toggle('expanded');}
+  if(!bar){bar=document.createElement('div');bar.id='gameBar';bar.innerHTML='<button id="economyLiveHUD"></button><button id="districtButton">街区</button><button id="worldLogButton">日志</button><button id="gameMenuToggle">菜单 ▾</button>';document.body.append(bar);bar.append(document.getElementById('displayTools'));const tools=document.querySelector('.touch-tools');if(tools)bar.append(tools);bar.querySelector('#economyLiveHUD').onclick=openWorldDashboard;bar.querySelector('#districtButton').onclick=()=>districtScene.open('shop');bar.querySelector('#worldLogButton').onclick=()=>{unlock();openJournal(ui,G.economy);};bar.querySelector('#gameMenuToggle').onclick=()=>bar.classList.toggle('expanded');}
   bar.hidden=mode!=='play'||!!ui.open;const e=G.economy;
   bar.querySelector('#economyLiveHUD').textContent=`经济 ${e.round}轮 · GDP NT$${e.metrics.gdp||0} · 1 GOD = NT$${exchangeRate(e)}`;
 }
@@ -714,3 +717,7 @@ function recruitResidents(){
  const kinds=['farmer','auntie','man2','oldman'];for(let i=0;i<n;i++){const s=spawnSpots[(current+i)%spawnSpots.length];new NPC(kinds[i%kinds.length],s[0],s[1],{role:'ped',name:'新居民 '+(current+i+1)});}
  G.economy.world.populationTarget=current+n;worldBindings.sync(G.economy,ents,vehicles,animals,player);decision(G.economy,'新增 '+n+' 名居民，人口达到 '+(current+n));return true;
 }
+
+const districtScene=createDistrictScene({scene,camera,ground:heightAt,ui,getEconomy:()=>G.economy,navigate:navigateTo,save:doSave,unlock});
+ui.journalNavigate=target=>{ui.close();navigateTo(target);};
+ui.openDistrictJournal=id=>openJournal(ui,G.economy,id);

@@ -11,3 +11,5 @@ export const economyURL=url((await read('economy.js')).replace("'./world-economy
 export const Town=await import(townURL);
 export const R=await import(residentsURL);
 export const E=await import(economyURL),C=await import(cryptoURL),L=await import(ledgerURL);
+
+export const D=await import(url((await read('district.js')).replace("'./economy-ledger.js'",JSON.stringify(ledgerURL)).replace("'./town-currency.js'",JSON.stringify(townURL))));

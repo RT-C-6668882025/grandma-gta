@@ -70,7 +70,7 @@ export function worldRound(e){
   const assets=w.assets||[],transport=assets.filter(a=>a.kind==='vehicle'&&a.available),livestock=assets.filter(a=>a.kind==='animal'&&a.available&&['rooster','goose','buffalo'].includes(a.type));
   const workingTransport=transport.filter(a=>a.moving||a.assigned).length;
   const m=e.metrics;Object.assign(m,{gdp:0,services:0,tax:0,unpaid:0,logistics:workingTransport,active:active.length});
-  for(const d of ds){const b=e.industries[d.id];b.staff=0;b.roundSales=0;b.roundOutput=0;b.reason=b.open?(b.cash+(e.crypto.holders['i:'+d.id]||0)*rate<28?'缺少运营资金':(['housing','storage'].includes(d.sector)?'无需员工':'等待招聘')):'已停业';}
+  for(const d of ds){const b=e.industries[d.id];b.staff=0;b.reserved=0;b.roundSales=b.pendingSales||0;b.pendingSales=0;b.roundOutput=0;b.reason=b.open?(b.cash+(e.crypto.holders['i:'+d.id]||0)*rate<28?'缺少运营资金':(['housing','storage'].includes(d.sector)?'无需员工':'等待招聘')):'已停业';}
   const employable=ds.filter(d=>!['housing','storage'].includes(d.sector)&&e.industries[d.id].open);
   // Job vacancies follow existing scene roles. Residents may change employers when firms run out of cash.
   for(const h of active){
@@ -80,11 +80,12 @@ export function worldRound(e){
     let candidates=preferred?(bySector[preferred]||[]):employable;
     const last=ds.find(d=>d.id===h.industry);
     candidates=[...(last&&e.industries[last.id].open?[last]:[]),...candidates.slice(h.id%candidates.length),...candidates.slice(0,h.id%candidates.length)];
-    const d=candidates.find(d=>{const b=e.industries[d.id];return b.open&&b.staff<b.capacity&&(b.cash+(e.crypto.holders['i:'+d.id]||0)*rate)>=28;});
+    const d=candidates.find(d=>{const b=e.industries[d.id];return b.open&&b.staff+(b.reserved||0)<b.capacity&&(b.cash+(e.crypto.holders['i:'+d.id]||0)*rate)>=(b.wage||28);});
     if(!d){h.job='rest';m.unpaid++;continue;}
-    const b=e.industries[d.id],currency=e.coinMode?b.currency:'ntd';
-    if(!settle(e,'i:'+d.id,owner,28,currency,'工资 · '+d.name)){b.reason='无法支付工资 / 兑换池不足';m.unpaid++;continue;}
-    const wage=currency==='beta'?toCoins(e,28):28;b[currency==='beta'?'wages':'wagesNT']+=wage;b.staff++;m.workers++;m.wages+=currency==='beta'?wage*rate:wage;h.working=true;if(h.industry!==d.id)event(e,'就业',h.name+' 入职 '+d.name,{resident:h.id,industry:d.id});h.industry=d.id;b.reason='营业中';
+    const b=e.industries[d.id],currency=e.coinMode?b.currency:'ntd',baseWage=b.wage||28;
+    if(w.district?.includes(d.id)&&h.role==='ped'&&h.location){h.industry=d.id;const at=d.entrance||d;if(Math.hypot(h.location.x-at.x,h.location.z-at.z)>10){h.job='commute';b.reserved++;b.reason='员工通勤中';continue;}}
+    if(!settle(e,'i:'+d.id,owner,baseWage,currency,'工资 · '+d.name)){b.reason='无法支付工资 / 兑换池不足';m.unpaid++;continue;}
+    const wage=currency==='beta'?toCoins(e,baseWage):baseWage;b[currency==='beta'?'wages':'wagesNT']+=wage;b.staff++;m.workers++;m.wages+=currency==='beta'?wage*rate:wage;h.working=true;if(h.industry!==d.id)event(e,'就业',h.name+' 入职 '+d.name,{resident:h.id,industry:d.id});h.industry=d.id;b.reason='营业中';
     if(e.crypto.enabled&&e.crypto.reserve>0&&h.id%8===0&&h.hunger<3){h.job='mine';h.working=false;b.reason='提供挖矿岗位';continue;}
     if(!e.supply){b.reason='生产开关关闭';continue;}
     if(outputKind(d.sector)){
@@ -110,6 +111,7 @@ export function worldRound(e){
     for(const sector of ['food',...(e.round%3===h.id%3?['health','leisure','retail']:[])]){
       const list=(bySector[sector]||[]).filter(d=>{const b=e.industries[d.id];return b.open&&b.staff>0&&b.stock>0;});if(!list.length)continue;
       const d=list[(h.id+e.round)%list.length],b=e.industries[d.id],price=sector==='food'?12:8;
+      if(w.district?.includes(d.id)&&h.role==='ped'&&h.location){if(!h.visit)h.visit={industry:d.id,price,sector,created:e.round};continue;}
       if(worldService(e,d.id,price,'居民消费 · '+d.name,owner)){b.stock--;b.units++;b.roundSales+=price;if(sector==='food')h.hunger=Math.max(0,h.hunger-2);else h.serviceVisits=(h.serviceVisits||0)+1;}
     }
     // Housing is an occupied asset, not a producer; rent only with a funded household.
@@ -130,9 +132,9 @@ export function worldRound(e){
   }
   w.wellbeing=assets.filter(a=>a.kind==='animal'&&['cat','dog'].includes(a.type)&&a.available&&e.round-(a.fed??-10)<5).length;
   if(w.unpaidRewards>0&&e.bank>100){const pay=Math.min(w.unpaidRewards,e.bank-100);if(transfer(e,'bank','player',pay,'结清任务奖励'))w.unpaidRewards-=pay;}
-  for(const d of ds){const b=e.industries[d.id];if(b.reason!==b.loggedReason){event(e,'产业',d.name+'：'+b.reason);b.loggedReason=b.reason;}}
+  for(const d of ds){const b=e.industries[d.id];if(b.reason!==b.loggedReason){event(e,'产业',d.name+'：'+b.reason,{industry:d.id});b.loggedReason=b.reason;}}
   event(e,'轮次','GDP NT$'+m.gdp+' · 就业 '+m.workers+'/'+active.length+' · 产出 '+m.production+' · 未获工资 '+m.unpaid,{gdp:m.gdp,workers:m.workers,production:m.production});
-  for(const d of e.pendingDecisions||[])if(e.round>d.round)event(e,'决策反馈',d.message+' 后：就业 '+d.workers+' → '+m.workers+'，GDP '+d.gdp+' → '+m.gdp+'，产出 '+d.production+' → '+m.production+'。这是同期变化，可能受其他事件共同影响。',{decisionId:d.id});
+  for(const d of e.pendingDecisions||[])if(e.round>d.round)event(e,'决策反馈',d.message+' 后：就业 '+d.workers+' → '+m.workers+'，GDP '+d.gdp+' → '+m.gdp+'，产出 '+d.production+' → '+m.production+'。这是同期变化，可能受其他事件共同影响。',{decisionId:d.id,industry:d.industry,location:d.location});
   e.pendingDecisions=(e.pendingDecisions||[]).filter(d=>e.round<=d.round);
   w.totals.production+=m.production;w.totals.sales+=m.sales;w.totals.wages+=m.wages;
   const reasons=[];if(m.unpaid)reasons.push(m.unpaid+' 人未获工资');if(!e.supply)reasons.push('生产已关闭');if(active.some(h=>h.hunger>2))reasons.push('食品供给或居民购买力不足');if(!workingTransport)reasons.push('物流仅有步行运力');w.bottlenecks=reasons;
@@ -141,4 +143,15 @@ export function snapshotEconomy(e){
   if(!e.world)return;const w=e.world,active=e.households.filter(h=>h.active!==false),m=e.metrics;
   const point={round:e.round,gdp:m.gdp||0,production:m.production||0,sales:m.sales||0,wages:m.wages||0,workers:m.workers||0,population:active.length,unmet:active.filter(h=>h.hunger>0).length,rate:exchangeRate(e),cash:e.player,coins:e.crypto.holders.player,stock:Object.values(e.industries||{}).reduce((n,b)=>n+(b.stock||0),0)};
   const prev=w.history.at(-1);if(prev?.round===e.round)w.history[w.history.length-1]=point;else w.history.push(point);w.history=w.history.slice(-120);return point;
+}
+
+export function finishVisit(e,h){
+ const visit=h.visit;if(!visit||h.unavailable)return false;const d=e.world.places.find(d=>d.id===visit.industry),b=e.industries[visit.industry];if(!d||!b){delete h.visit;return false;}const at=d.entrance||d;
+ if(!h.location||Math.hypot(h.location.x-at.x,h.location.z-at.z)>7)return false;
+ delete h.visit;
+ if(!b.open||!b.staff||b.stock<1){event(e,'消费',h.name+' 到达 '+d.name+'，因'+(!b.open?'停业':!b.staff?'无人营业':'缺货')+'未能消费',{industry:d.id,resident:h.id});return false;}
+ const beforeSales=e.metrics.sales||0;
+ if(!worldService(e,d.id,visit.price,'到店消费 · '+d.name,'h:'+h.id)){event(e,'消费',h.name+' 到店但支付不足',{industry:d.id,resident:h.id});return false;}
+ b.stock--;b.units++;b.roundSales=(b.roundSales||0)+visit.price;b.pendingSales=(b.pendingSales||0)+visit.price;e.world.totals.sales+=(e.metrics.sales||0)-beforeSales;b.visitors=(b.visitors||0)+1;if(visit.sector==='food')h.hunger=Math.max(0,h.hunger-2);
+ event(e,'消费',h.name+' 到达 '+d.name+'，消费 NT$'+visit.price,{industry:d.id,resident:h.id});snapshotEconomy(e);return true;
 }
