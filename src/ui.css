@@ -327,3 +327,5 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #111; color:
 @media(min-height:700px){.touch-layout #touchStick{width:150px;height:150px}.touch-layout #touchSprint{bottom:calc(12vh + 180px)}.touch-layout .touch-actions{right:7vw;bottom:13vh}}
 @media(max-height:500px){.touch-layout #touchStick{width:104px;height:104px;bottom:12vh}.touch-layout #touchSprint{bottom:calc(12vh + 125px);height:38px}.touch-layout .touch-actions{width:214px;height:172px;right:4vw;bottom:8vh}.touch-layout .touch-actions [data-key="KeyE"]{right:140px}.touch-layout .touch-actions [data-key="KeyJ"]{width:74px!important;height:74px!important}.touch-layout .touch-more{top:48px;max-height:calc(100dvh - 60px)}}
 @media(max-width:500px) and (orientation:portrait){.touch-layout #touchStick{left:16px;bottom:110px;width:96px;height:96px}.touch-layout #touchSprint{left:28px;bottom:235px}.touch-layout .touch-actions{right:16px;bottom:90px;transform:scale(calc(var(--touch-scale,1)*.8))}}
+
+#gameBar{flex-wrap:wrap;max-height:40vh;overflow:auto}#gameBar #economyLiveHUD{flex:1;min-width:90px}

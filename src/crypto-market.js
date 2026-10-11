@@ -42,6 +42,7 @@ export function matchOrders(e){
 export function marketRound(e){
   const c=e.crypto;if(!c.enabled)return;
   for(const o of [...c.orders])if(o.owner!=='player')cancelOrder(e,o.id,o.owner);
+  if(e.world?.enabled&&e.government)return; // World residents accumulate earned GOD; no random speculative churn.
   for(let n=0;n<e.households.length;n++){
     const i=(n+e.round)%e.households.length,owner='h:'+i,h=e.households[i],coins=c.holders[owner],p=c.price;
     const reserve=100,phase=(e.round+i)%5;

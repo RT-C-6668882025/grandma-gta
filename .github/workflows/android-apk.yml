@@ -53,15 +53,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v1.13.1-stable >/dev/null 2>&1; then exit 0; fi
+          if gh release view v1.14-town >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
-          手机 / 平板通用版 · Android 8.0+。
-          修复动作淡出期间接新动作导致旧动画残留、姿势叠加的问题；脚步声改按实际地面位移触发。
-          触控：左下浮动摇杆、前推外圈冲刺、右侧拇指动作区；攻击键可长按连击并拖动视角，多指互不抢占。
-          灵敏度与按键大小可调整并保存；上车自动切换下车、刹车与任务投掷按钮。
-          键鼠：WASD + Shift，左键长按攻击，右键轻点投掷 / 拖动视角，E 互动 / 上下车；旧快捷键继续可用。
-          123 项自动测试通过；真实模型动作切换、多指触控、三种屏幕尺寸及整局 E 键上下车检查通过。手机 / 平板手感仍需真机体验。
-          README 已更新，「日志」名称不变。
-          独立包名，可与 1.12 / 1.13 并存，不用卸载旧版；新旧存档独立。后续稳定版固定签名，缺少签名配置时禁止发布。
+          手机 / 平板通用版 · Android 8.0+，固定签名，可覆盖安装 1.13.1 稳定版。
+          店铺位置固定，居民控股人可以变化；扶持 / 收购 / 撤资三种干预，经营者自动招聘、采购、扩建和分红。
+          工资与经营利润的一部分购买玩家已有 GOD；能力影响工资和产出，显示累计售币收入及分红。
+          政府独立公库：扶持、政策选择、更换执政者；税收支持民生补贴及公共岗位。满意度过低触发抗议、停工与政府更替。
+          抗议居民会走向市政厅；店铺场景标签显示控股人，库存箱跟随经营变化。「日志」名称保持不变。
+          128 项自动测试通过，包括资金守恒、收购支付、旧存档、持币积累和政府更替。经营与政府为第一版，数值平衡及真机体验继续优化。
           NOTES
-          gh release create v1.13.1-stable android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 手机 / 平板通用版 1.13.1 · 固定签名稳定版' --notes-file notes.md
+          gh release create v1.14-town android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 1.14 · 店铺与政府' --notes-file notes.md

@@ -51,6 +51,6 @@ export function restoreEconomy(value){
   for(const [owner,flow] of Object.entries(value.flows||{}))if(Number.isSafeInteger(flow?.in)&&flow.in>=0&&Number.isSafeInteger(flow?.out)&&flow.out>=0)e.flows[owner]=flow;
   e.sequence=Number.isSafeInteger(value.sequence)&&value.sequence>=0?value.sequence:0;restoreIdentities(e);
   e.coinMode=value.coinMode===true&&e.crypto.enabled;
-  if(e.world?.enabled||e.coinMode||Object.keys(e.crypto.holders).some(k=>k.startsWith('i:'))){ensureIndustries(e);for(const b of Object.values(e.industries)){b.owner='player';b.open=b.open!==false;b.revenue=Number.isSafeInteger(b.revenue)&&b.revenue>=0?b.revenue:0;b.wages=Number.isSafeInteger(b.wages)&&b.wages>=0?b.wages:0;}}
+  if(e.world?.enabled||e.coinMode||Object.keys(e.crypto.holders).some(k=>k.startsWith('i:'))){ensureIndustries(e);for(const b of Object.values(e.industries)){b.open=b.open!==false;b.revenue=Number.isSafeInteger(b.revenue)&&b.revenue>=0?b.revenue:0;b.wages=Number.isSafeInteger(b.wages)&&b.wages>=0?b.wages:0;}}
   e.coinLedger=(Array.isArray(e.coinLedger)?e.coinLedger:[]).filter(t=>Number.isSafeInteger(t.amount)&&t.amount>0&&typeof t.reason==='string').slice(0,120);e.coinSequence=Number.isSafeInteger(e.coinSequence)&&e.coinSequence>=0?e.coinSequence:0;return e;
 }
