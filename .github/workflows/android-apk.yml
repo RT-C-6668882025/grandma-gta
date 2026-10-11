@@ -35,14 +35,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v1.12.0-locomotion >/dev/null 2>&1; then exit 0; fi
+          if gh release view v1.13.0-controls >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
           手机 / 平板通用版 · Android 8.0+。
-          主角地面移动加入起步缓动、快速收步和掉头减速。
-          走跑步频按碰撞后的实际位移与混合动画的参考速度计算，减少撞墙踏步及速度不匹配。
-          保留原版骨骼、战斗命中时机、骑乘和飞扑；日志名称与经济功能保持不变。
-          这是动作优化第一轮，尚未加入专用转身动画、地面脚部 IK 或第一人称身体。高倍速仍属于超能力表现。
-          114 项自动测试通过，真实主角模型运行检查通过；手机 / 平板手感仍需真机验证。
+          修复动作淡出期间接新动作导致旧动画残留、姿势叠加的问题；脚步声改按实际地面位移触发。
+          触控：左下浮动摇杆、前推外圈冲刺、右侧拇指动作区；攻击键可长按连击并拖动视角，多指互不抢占。
+          灵敏度与按键大小可调整并保存；上车自动切换下车、刹车与任务投掷按钮。
+          键鼠：WASD + Shift，左键长按攻击，右键轻点投掷 / 拖动视角，E 互动 / 上下车；旧快捷键继续可用。
+          121 项自动测试通过；真实模型动作切换、多指触控、三种屏幕尺寸及整局 E 键上下车检查通过。手机 / 平板手感仍需真机体验。
+          README 已更新，「日志」名称不变。
           个人测试签名可能与旧版不同，卸载会清除存档。
           NOTES
-          gh release create v1.12.0-locomotion android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 手机 / 平板通用版 1.12 · 主角基础步态' --notes-file notes.md
+          gh release create v1.13.0-controls android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 手机 / 平板通用版 1.13 · 动作修复与触控' --notes-file notes.md

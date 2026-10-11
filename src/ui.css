@@ -306,3 +306,24 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #111; color:
 .touch-actions [data-key="KeyE"]{right:60%;bottom:12%}.touch-actions [data-key="KeyG"]{right:26%;bottom:0}
 
 .shop-world-label{position:fixed;transform:translate(-50%,-100%);z-index:7;background:#163c2ee8;color:#eaffed;border:1px solid #7cda9d;border-radius:9px;padding:7px 10px;max-width:200px;font:12px var(--sans);pointer-events:auto}.shop-world-label[hidden]{display:none}.shop-world-label[data-state="已停业"],.shop-world-label[data-state="资金不足"]{background:#531e24e8;border-color:#ec8b8b}.shop-world-label[data-state="缺货"]{background:#604212e8;border-color:#f4c267}
+/* Thumb controls: fixed sizes in CSS pixels, floating left stick, open right look area. */
+.touch-layout #touchStick{width:128px;height:128px;left:max(7vw,env(safe-area-inset-left));bottom:max(12vh,env(safe-area-inset-bottom));transform:scale(var(--touch-scale,1));transform-origin:top left;background:#14202c38;border-color:#ffffff50}
+.touch-layout #touchStick i{width:48px;height:48px;background:#ffffff65}
+.touch-layout #touchStick.sprinting{border-color:#f2c230;background:#f2c23022}
+.touch-layout #touchStick.sprinting .stick-label{color:#ffe66d}
+.touch-layout #touchSprint{position:absolute;left:max(9vw,env(safe-area-inset-left));bottom:calc(12vh + 155px);width:68px;height:44px;border-radius:24px;background:#14202c66}
+.touch-layout .touch-actions{width:244px;height:192px;right:max(5vw,env(safe-area-inset-right));bottom:max(9vh,env(safe-area-inset-bottom));transform:scale(var(--touch-scale,1));transform-origin:bottom right}
+.touch-layout .touch-actions button{width:58px;height:58px;min-height:0;font-size:13px;background:#14202c80;border:1px solid #ffffff65}
+.touch-layout .touch-actions [data-key="KeyJ"]{width:82px!important;height:82px!important;right:24px;bottom:62px}
+.touch-layout .touch-actions [data-key="KeyE"]{right:142px;bottom:56px}
+.touch-layout .touch-actions [data-key="KeyG"]{right:80px;bottom:0}
+.touch-layout .touch-actions [data-key="KeyH"]{right:0;bottom:0}
+.touch-layout .touch-actions [data-key="Space"]{display:none;right:24px;bottom:62px;width:82px;height:82px}
+.touch-layout #touchControls.driving .touch-actions [data-key="Space"]{display:block}
+.touch-layout #touchControls.driving .touch-actions [data-key="KeyJ"]{right:80px;bottom:0;width:58px!important;height:58px!important}
+.touch-layout #touchControls.driving .touch-actions [data-key="KeyG"],.touch-layout #touchControls.driving .touch-actions [data-key="KeyH"],.touch-layout #touchControls.driving #touchSprint{display:none}
+.touch-layout .touch-more{top:76px;bottom:auto;right:12px;width:min(320px,85vw);max-height:calc(100dvh - 90px);overflow-y:auto;pointer-events:auto;touch-action:pan-y;z-index:4}
+.touch-settings{display:block;grid-column:1/-1}.touch-settings label{display:flex;justify-content:space-between;align-items:center;margin:8px 0}.touch-settings p{font-size:11px;opacity:.75;margin:8px 0 0}.touch-settings input{touch-action:pan-x;pointer-events:auto}
+@media(min-height:700px){.touch-layout #touchStick{width:150px;height:150px}.touch-layout #touchSprint{bottom:calc(12vh + 180px)}.touch-layout .touch-actions{right:7vw;bottom:13vh}}
+@media(max-height:500px){.touch-layout #touchStick{width:104px;height:104px;bottom:12vh}.touch-layout #touchSprint{bottom:calc(12vh + 125px);height:38px}.touch-layout .touch-actions{width:214px;height:172px;right:4vw;bottom:8vh}.touch-layout .touch-actions [data-key="KeyE"]{right:140px}.touch-layout .touch-actions [data-key="KeyJ"]{width:74px!important;height:74px!important}.touch-layout .touch-more{top:48px;max-height:calc(100dvh - 60px)}}
+@media(max-width:500px) and (orientation:portrait){.touch-layout #touchStick{left:16px;bottom:110px;width:96px;height:96px}.touch-layout #touchSprint{left:28px;bottom:235px}.touch-layout .touch-actions{right:16px;bottom:90px;transform:scale(calc(var(--touch-scale,1)*.8))}}

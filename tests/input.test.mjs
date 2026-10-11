@@ -144,3 +144,21 @@ test('edge turning is frame-rate independent and disabled for UI, lock and drag'
  listeners.get('mousemove')({target:canvas,clientX:0,clientY:300});input.pollMouseLook(.05);assert.equal(input.mouse.dx,0);
  delete globalThis.PointerEvent;
 });
+
+test('right tap throws once, right drag does not, and a touch release cannot cancel a mouse hold',()=>{
+  input.resetInput();input.setMouseMode('drag');input.setUiBlocking(()=>false);
+  globalThis.PointerEvent=class {};
+  const listeners=new Map(),handlers=new Map();
+  globalThis.addEventListener=(t,fn)=>listeners.set(t,fn);
+  globalThis.document={pointerLockElement:null,addEventListener:(t,fn)=>listeners.set(t,fn)};
+  const canvas={addEventListener:(t,fn)=>handlers.set(t,fn),setPointerCapture(){}};
+  input.initInput(canvas);
+  const event=(button,x=100,y=100)=>({button,pointerType:'mouse',pointerId:1,clientX:x,clientY:y,target:canvas,preventDefault(){}});
+  handlers.get('pointerdown')(event(2));listeners.get('pointerup')(event(2));
+  assert.equal(input.mouse.clickR,true);input.endFrame();assert.equal(input.mouse.clickR,false);
+  handlers.get('pointerdown')(event(2));listeners.get('pointermove')(event(2,120));listeners.get('pointerup')(event(2,120));
+  assert.equal(input.mouse.clickR,false);
+  handlers.get('pointerdown')(event(0));listeners.get('pointerup')({...event(0),pointerType:'touch'});
+  assert.equal(input.mouse.left,true);listeners.get('pointerup')(event(0));assert.equal(input.mouse.left,false);
+  handlers.get('pointerdown')(event(2));handlers.get('pointercancel')(event(2));listeners.get('pointerup')(event(2));assert.equal(input.mouse.clickR,false);
+});

@@ -33,7 +33,7 @@ export function initDisplay(canvas, state) {
     const playing = state().playing && !help.open;
     const showCursor = playing && !mouse.locked && hasMouse && overCanvas;
     cursor.hidden = !showCursor; canvas.style.cursor = showCursor ? 'none' : 'default';
-    aim.hidden = !playing || !mouse.locked;
+    aim.hidden = !playing;
     if (help.open) resetInput();
   };
 }

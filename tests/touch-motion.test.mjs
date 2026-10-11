@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const moduleUrl = async path => 'data:text/javascript;base64,'+(await readFile(new URL(path,import.meta.url))).toString('base64');
 const motionUrl=await moduleUrl('../src/touch-motion.js');
-const {stickVector,mixMovement,createTouchMotion,touchMove}=await import(motionUrl);
+const {stickVector,mixMovement,createTouchMotion,touchMove,stickSprint,touchLookDelta}=await import(motionUrl);
 test('analog stick has a deadzone, proportional speed and circular diagonal limit',()=>{
   assert.deepEqual(stickVector(3,4,100),{x:0,y:0});
   assert.deepEqual(stickVector(10,10,0),{x:0,y:0});
@@ -29,17 +29,18 @@ source=source.replace("'./input.js'",JSON.stringify(inputUrl)).replace("'./touch
 const {initTouch}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 function element(key) {
   const handlers=new Map(), classes=new Set();
-  return {dataset:{key},style:{},hidden:false,handlers,attributes:{},
+  return {dataset:{key},style:{setProperty(){}},hidden:false,handlers,attributes:{},
     classList:{add:v=>classes.add(v),remove:v=>classes.delete(v),toggle:(v,on)=>on?classes.add(v):classes.delete(v),contains:v=>classes.has(v)},
     addEventListener:(type,fn)=>handlers.set(type,fn),append(){},setPointerCapture(){},setAttribute(name,v){this.attributes[name]=v;},
     closest:()=>key && !['Escape','Tab','KeyT','KeyM'].includes(key),getBoundingClientRect:()=>({left:0,top:0,width:100}),
     fire(type,id,x=50,y=50){handlers.get(type)?.({pointerId:id,pointerType:'touch',clientX:x,clientY:y,preventDefault(){}});}};
 }
 test('wired controls support three fingers and reset across background, resize and pause',()=>{
-  const globals=new Map(), buttons=['KeyJ','KeyF','Space'].map(element),pad=element(),knob=element(),more=element(),drawer=element(),toggle=element(),canvas=element(),root=element();
+  const globals=new Map(), buttons=['KeyJ','KeyE','Space'].map(element),pad=element(),knob=element(),more=element(),drawer=element(),toggle=element(),canvas=element(),root=element();
+  globalThis.innerWidth=1280;globalThis.innerHeight=720;
   drawer.hidden=true;pad.querySelector=()=>knob;root.querySelector=s=>({'#touchStick':pad,'#touchMore':more,'#touchMorePanel':drawer,'#touchToggle':toggle}[s]||buttons.find(b=>s.includes(b.dataset.key)));
   root.querySelectorAll=s=>s==='[data-key]'?buttons:buttons.filter(b=>b.classList.contains('held'));
-  globalThis.document={hidden:false,body:{append(){},classList:element().classList},createElement:tag=>tag==='label'?{set innerHTML(v){},querySelector:()=>({})}:root,addEventListener:(t,fn)=>globals.set(t,fn)};
+  globalThis.document={_created:0,hidden:false,body:{append(){},classList:element().classList},createElement:tag=>tag==='div' && document._created++ ?{set innerHTML(v){},querySelector:()=>({})}:root,addEventListener:(t,fn)=>globals.set(t,fn)};
   Object.defineProperty(globalThis,'navigator',{value:{maxTouchPoints:5},configurable:true});globalThis.addEventListener=(t,fn)=>globals.set(t,fn);
   const state={active:true,playing:true,dancing:false,driving:false},update=initTouch(canvas,()=>state);update();input.resetInput();
   const start=()=>{pad.fire('pointerdown',1,50,0);canvas.fire('pointerdown',2);buttons[0].fire('pointerdown',3);};
@@ -49,7 +50,20 @@ test('wired controls support three fingers and reset across background, resize a
   for(const event of ['blur','resize','visibilitychange']){start();document.hidden=true;globals.get(event)();assert.equal(touchMove.y,0);assert.equal(input.down('KeyJ'),false);assert.equal(drawer.hidden,true);}
   document.hidden=false;start();state.playing=false;update();assert.equal(touchMove.y,0);assert.equal(input.down('KeyJ'),false);
   state.playing=true;update();buttons[0].fire('pointerdown',4);buttons[0].fire('pointerup',4);assert.equal(buttons[0].classList.contains('held'),false);
-  state.driving=true;update();assert.equal(buttons[1].textContent,'下車');assert.equal(buttons[2].textContent,'剎車 / 喇叭');
+  state.driving=true;update();assert.equal(buttons[1].textContent,'下车');assert.equal(root.classList.contains('driving'),true);
 });
 
 test('eight-way touch movement locks forward and diagonals without overspeed',()=>{assert.deepEqual(stickVector(8,-100,100,true),{x:0,y:-1});const d=stickVector(80,-100,100,true);assert.ok(Math.abs(d.x+d.y)<1e-9);assert.ok(Math.abs(Math.hypot(d.x,d.y)-1)<1e-9);});
+
+test('sprint needs deliberate forward extension, has hysteresis, and releases sideways',()=>{
+  assert.equal(stickSprint(0,-100,100),false);
+  assert.equal(stickSprint(0,-120,100),true);
+  assert.equal(stickSprint(0,-100,100,true),true);
+  assert.equal(stickSprint(0,-85,100,true),false);
+  assert.equal(stickSprint(100,-120,100,true),false);
+  assert.equal(stickSprint(0,120,100,true),false);
+});
+test('touch camera distance is not lost when the event stream coalesces',()=>{
+  const whole=touchLookDelta(120,30,.35,800),half=touchLookDelta(60,15,.35,800);
+  assert.equal(whole.x,half.x*2);assert.equal(whole.y,half.y*2);
+});

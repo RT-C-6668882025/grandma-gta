@@ -2,9 +2,9 @@
 
 export const keys = new Set();
 export const pressed = new Set(); // edge-triggered this frame
-export const mouse = { dx: 0, dy: 0, wheel: 0, left: false, right: false, clickL: false, locked: false };
+export const mouse = { dx: 0, dy: 0, wheel: 0, left: false, right: false, clickL: false, clickR: false, locked: false };
 let el = null;
-let dragging = false;
+let dragging = false, rightGesture = null;
 let lockFailed = false;
 let savedMouseMode = null, lastPointer = null, lastRelative = null, overCanvas = false;
 try { savedMouseMode = localStorage.getItem('ama-mouse-mode-v2'); } catch {}
@@ -24,7 +24,7 @@ export function holdKey(code, source, held) {
 }
 export function resetInput() {
   keys.clear(); pressed.clear(); touchKeys.clear(); dragging = false; lastPointer = lastRelative = null; overCanvas = false;
-  mouse.left = mouse.right = mouse.clickL = false;
+  mouse.left = mouse.right = mouse.clickL = mouse.clickR = false; rightGesture = null;
   mouse.dx = mouse.dy = mouse.wheel = 0;
 }
 export let uiBlocking = () => false;
@@ -49,6 +49,7 @@ export function initInput(canvas) {
     if (uiBlocking() || e.sourceCapabilities?.firesTouchEvents) return;
     if (!canvas.requestPointerLock) lockFailed = true;
     lastPointer = { x: e.clientX, y: e.clientY };
+    if (e.button === 2) rightGesture = { distance: 0 };
     // embedded views (the app's browser pane, some iframes) refuse pointer lock:
     // then left = attack and right-drag turns the camera
     if (lockFailed || getMouseMode() !== 'lock') {
@@ -64,6 +65,11 @@ export function initInput(canvas) {
     if (e.button === 2) { mouse.right = true; dragging = true; if (pointerEvents) { e.preventDefault(); canvas.setPointerCapture?.(e.pointerId); } }
   });
   addEventListener(pointerEvents ? 'pointerup' : 'mouseup', (e) => {
+    if (e.pointerType && e.pointerType !== 'mouse') return;
+    if (e.button === 2 && rightGesture) {
+      if (!uiBlocking() && rightGesture.distance < 7) mouse.clickR = true;
+      rightGesture = null;
+    }
     if (e.button === 0) mouse.left = false;
     if (e.button === 2) { mouse.right = false; dragging = false; }
   });
@@ -87,6 +93,7 @@ export function initInput(canvas) {
         ((stamp === null && lastRelative.stamp === null) || (stamp !== null && lastRelative.stamp !== null && Math.abs(stamp - lastRelative.stamp) <= 2));
       if (!duplicate) {
         mouse.dx += dx; mouse.dy += dy;
+        if (rightGesture) rightGesture.distance += Math.hypot(dx, dy);
         if (!coordinates) lastRelative = { stream, dx, dy, stamp };
       }
     }
@@ -96,7 +103,7 @@ export function initInput(canvas) {
   if (pointerEvents) addEventListener('pointermove', e => move(e, 'pointer'));
   addEventListener('mousemove', e => move(e, 'mouse'));
   canvas.addEventListener('pointerleave', () => { overCanvas = false; if (!dragging) lastPointer = null; });
-  canvas.addEventListener('pointercancel', () => { mouse.left = mouse.right = false; dragging = false; lastPointer = null; });
+  canvas.addEventListener('pointercancel', e => { if (e.pointerType && e.pointerType !== 'mouse') return; mouse.left = mouse.right = false; rightGesture = null; dragging = false; lastPointer = null; });
   canvas.addEventListener('wheel', (e) => { mouse.wheel += Math.sign(e.deltaY); e.preventDefault(); }, { passive: false });
   document.addEventListener('pointerlockchange', () => { mouse.locked = document.pointerLockElement === el; resetInput(); });
 }
@@ -121,7 +128,7 @@ export function endFrame() {
   pressed.clear();
   lastRelative = null;
   mouse.dx = mouse.dy = mouse.wheel = 0;
-  mouse.clickL = false;
+  mouse.clickL = mouse.clickR = false;
 }
 export const down = (...codes) => codes.some((c) => keys.has(c) || (touchKeys.get(c)?.size || 0) > 0);
 export const hit = (...codes) => codes.some((c) => pressed.has(c));

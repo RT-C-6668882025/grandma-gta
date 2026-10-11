@@ -1,3 +1,4 @@
+import { combatActions, contextAction } from './control-actions.js';
 import {initDistrict} from './district.js';
 import {createDistrictScene} from './district-scene.js';
 import {openJournal} from './event-journal.js';
@@ -307,7 +308,8 @@ function clearNavigation(){delete G.navigation;ui.navigation=null;navigationHint
 ui.mapData=()=>({markers:[...(G.economy.world?.places||[]).filter(d=>d.kind!=='archive').map(d=>({...d,label:d.name,category:'shop',color:'#93cbbd'})),...G.economy.households.filter(h=>h.active&&h.location).map(h=>({...h.location,label:h.name,category:'resident',color:'#80dfff'})),...(G.navigation?[{...G.navigation,category:'destination',color:'#ffdd44'}]:[]),...Object.entries({shop:'柑仔店',hardware:'五金行',clinic:'診所',market:'菜市場 / 領貨',cloth:'夜市衣攤',recycle:'回收場',betel:'檳榔攤'}).map(([id,label])=>({...P[id],id,label,category:'shop',color:'#f2c230'})),{...MINE,label:'算力中心 / 挖礦',category:'job',color:'#cc8bff'},{...P.shop,label:'送貨交貨點',category:'job',color:'#f2c230'},...Object.entries({home:'阿嬤家',police:'派出所',temple:'媽祖廟',station:'車站',school:'國小',banyan:'大榕樹'}).map(([id,label])=>({...P[id],label,category:'place',color:'#c7d8e0'})),...residentScene.markers(G.economy),...blips.map(b=>({...b,label:b.label||'任務',category:'mission'}))],navigation:ui.navigation,onNavigate:navigateTo,onTeleport:teleportTo,onClear:clearNavigation});
 const clock = new THREE.Clock();
 let prNow = prMax, frAcc = 0, frN = 0;
-const updateTouch = initTouch(canvas, () => ({ active: mode === 'play', playing: mode === 'play' && !ui.open && !inputLocked() && !dance.on && !player?.down, dancing: dance.on && !ui.open, driving: !!player?.veh, toast: message => ui.toast(message) }));
+let touchInteraction = '互动';
+const updateTouch = initTouch(canvas, () => ({ active: mode === 'play', playing: mode === 'play' && !ui.open && !inputLocked() && !dance.on && !player?.down, dancing: dance.on && !ui.open, driving: !!player?.veh, interaction: touchInteraction, toast: message => ui.toast(message) }));
 const updateDisplay = initDisplay(canvas, () => ({ playing: mode === 'play' && !ui.open && !inputLocked() && !dance.on }));
 function frame() {
   updateDisplay();
@@ -373,7 +375,10 @@ function step(d) {
     (down('KeyD', 'ArrowRight') ? 1 : 0) - (down('KeyA', 'ArrowLeft') ? 1 : 0), touchMove, playing);
   // ---------- vehicle / on foot
   const v = player.veh;
-  if (playing && hit('KeyF')) {
+  const contextPressed = playing && hit('KeyE');
+  const exitedByContext = contextPressed && !!v;
+  if (exitedByContext) exitVehicle();
+  if (playing && hit('KeyF') && !exitedByContext) {
     if (v) exitVehicle();
     else { const nv = nearestVehicle(); if (nv) enterVehicle(nv); }
   }
@@ -405,12 +410,15 @@ function step(d) {
       if (score < bs) { bs = score; target = e; }
     }
   }
+  const combat = combatActions({ playing, mounted: !!player.veh, busy: player.actor.busy,
+    attackPressed: mouse.clickL || hit('KeyJ'), attackHeld: mouse.left || down('KeyJ'),
+    throwPressed: mouse.clickR || hit('KeyG') });
   const ctl = {
     flyAxis: playing && MOD.fly ? (down('PageUp') ? 1 : 0) - (down('PageDown') ? 1 : 0) : 0,
     move: { x: f.x * fw + r.x * rt, z: f.z * fw + r.z * rt },
     sprint: playing && down('ShiftLeft', 'ShiftRight'),
-    attack: playing && !player.veh && (mouse.clickL || hit('KeyJ')),
-    throw: playing && !player.veh && hit('KeyG'),
+    attack: combat.attack,
+    throw: combat.throw,
     target: target && target.distTo(player) < 3.2 ? target : null,
     aim: f,
   };
@@ -452,15 +460,22 @@ function step(d) {
   if (sky.hour < G.hour - 12) G.day++;
   G.hour = sky.hour; env.hour = sky.hour;
   // footsteps
-  stepDist += Math.hypot(player.vel.x, player.vel.z) * d;
+  if (!player.veh && !MOD.fly && !player.diving && !player.down) stepDist += player.actor.speed * d;
+  else stepDist = 0;
   if (!player.veh && stepDist > 1.5) { stepDist = 0; audio.play(player.wading ? 'splash' : 'step', player.wading ? 0.4 : 0.6); if (player.wading) fx.splash(player.pos, 3); }
   // interactions
   const its = playing ? interactables() : [];
   let prompt = its[0]?.label || null;
-  if (!prompt && playing && !player.veh) { const nv = nearestVehicle(); if (nv) prompt = `<kbd>F</kbd> ${nv.driver ? '搶' : nv.owner === 'ama' ? '騎' : '借'} ${nv.def.name}`; }
+  const nearbyVehicle = playing && !player.veh ? nearestVehicle() : null;
+  touchInteraction = its[0] ? '互动' : nearbyVehicle ? '上车' : '互动';
+  if (!prompt && nearbyVehicle) { const nv = nearbyVehicle; prompt = `<kbd>E / F</kbd> ${nv.driver ? '搶' : nv.owner === 'ama' ? '騎' : '借'} ${nv.def.name}`; }
   if (!prompt && player.veh && missionThrow()) prompt = '<kbd>左鍵</kbd> 丟報紙';
   ui.prompt(prompt);
-  if (its[0] && hit('KeyE')) { unlock(); its[0].act(); }
+  if (contextPressed && !exitedByContext && !hit('KeyF')) {
+    const action = contextAction({ mounted: !!player.veh, interaction: !!its[0], vehicle: !!nearbyVehicle });
+    if (action === 'interact') { unlock(); its[0].act(); }
+    else if (action === 'enter') enterVehicle(nearbyVehicle);
+  }
   // regen
   if (!player.down && performance.now() - (player.lastHurt || 0) > 7000) player.hp = Math.min(player.maxHp, player.hp + d * (ITEMS[G.eq.chain]?.regen ? 3 : 1.2));
   applyPowers(player, G);
@@ -640,7 +655,7 @@ function openLegacyEconomy(){
 function pauseHtml() {
   return `<div class="note" style="font-size:14px;line-height:1.9">
     <b>視角</b>：C / 視角按鈕切換三種視角；Z 回正；滾輪調整距離。移動轉視角模式下，把滑鼠停在畫面邊緣會持續轉向，移回中央停止。<br>
-    <b>走路</b>：WASD 移動 · Shift 跑 · Q 痞步 · 左鍵/J 打人 · G 丟藍白拖 · X 抽菸 · H 喝補藥 · B 嚼檳榔 · 空白鍵 罵人 · E 互動<br>
+    <b>走路</b>：WASD 移動 · Shift 跑 · Q 痞步 · 左键长按连续攻击 · 右键轻点 / G 投掷，右键拖动转视角 · X 抽菸 · H 喝補藥 · B 嚼檳榔 · 空白鍵 罵人 · E 互动 / 上下车<br>
     <b>車輛</b>：F 上車/搶車/下車 · W/S 油門倒車 · A/D 轉向 · 空白鍵 剎車/喇叭 · R 換電台<br>
     <b>介面</b>：Tab 背包 · T 老人機 · M 地圖 · 1-9 選對話 · Esc 暫停</div>
     <div class="row"><div><div class="nm">聲音</div></div><div class="acts"><button data-a="mute">${audio.muted ? '打開聲音' : '靜音'}</button></div></div>

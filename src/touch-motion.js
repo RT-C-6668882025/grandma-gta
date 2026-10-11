@@ -25,3 +25,13 @@ export function createTouchMotion(move = { x: 0, y: 0 }) {
   };
   return state;
 }
+
+// Hysteresis prevents sprint flicker at the outer ring. Reverse/sideways stops it.
+export function stickSprint(x, y, radius, active = false) {
+  if (!(radius > 0) || !Number.isFinite(x) || !Number.isFinite(y)) return false;
+  return -y / radius > (active ? .9 : 1.15) && Math.abs(x) < -y * .8;
+}
+export function touchLookDelta(x, y, sensitivity, shortSide) {
+  const scale = Math.max(.5, Math.min(1.5, 720 / Math.max(320, shortSide)));
+  return { x: x * sensitivity * scale, y: y * sensitivity * scale };
+}

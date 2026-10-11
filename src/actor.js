@@ -393,7 +393,8 @@ export class Actor {
   play(move, o = {}) {
     const m = this.t.moves[move];
     if (!m) { o.onHit && o.onHit(); o.onEnd && o.onEnd(); return false; }
-    if (this.cur && !this.cur.done) { this.cur.a.stop(); }
+    // A fading action is still scheduled: stop it before replacing its owner.
+    if (this.cur) { this.cur.a.stop(); }
     let a = this.moveActs[move];
     if (!a) { a = this.mixer.clipAction(m.clip); a.setLoop(THREE.LoopOnce); a.clampWhenFinished = true; this.moveActs[move] = a; }
     a.reset();
