@@ -712,6 +712,7 @@ function updateEconomyHUD(){
   let bar=document.getElementById('gameBar');
   if(!bar){bar=document.createElement('div');bar.id='gameBar';bar.innerHTML='<button id="economyLiveHUD"></button><button id="districtButton">店铺</button><button id="governmentButton">政府</button><button id="worldLogButton">日志</button><button id="gameMenuToggle">菜单 ▾</button>';document.body.append(bar);bar.append(document.getElementById('displayTools'));const tools=document.querySelector('.touch-tools');if(tools)bar.append(tools);bar.querySelector('#economyLiveHUD').onclick=openWorldDashboard;bar.querySelector('#districtButton').onclick=()=>districtScene.open('shop');bar.querySelector('#governmentButton').onclick=()=>districtScene.open('civic');bar.querySelector('#worldLogButton').onclick=()=>{unlock();openJournal(ui,G.economy);};bar.querySelector('#gameMenuToggle').onclick=()=>bar.classList.toggle('expanded');}
   bar.hidden=mode!=='play'||!!ui.open;const e=G.economy;
+  if(e.world?.rateFeedbackSummary&&e.world.feedbackDisplayed!==e.world.rateFeedbackSummary){ui.toast(e.world.rateFeedbackSummary);e.world.feedbackDisplayed=e.world.rateFeedbackSummary;}
   bar.querySelector('#economyLiveHUD').textContent=`经济 ${e.round}轮 · GDP NT$${e.metrics.gdp||0} · 1 GOD = NT$${exchangeRate(e)}`;
 }
 const routeDots=new THREE.InstancedMesh(new THREE.SphereGeometry(.35,6,4),new THREE.MeshBasicMaterial({color:0xffd34d,depthTest:false}),512);routeDots.count=0;routeDots.frustumCulled=false;routeDots.renderOrder=20;scene.add(routeDots);

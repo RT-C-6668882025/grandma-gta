@@ -1,3 +1,4 @@
+import {initEffects,updatePrices,consumerPrice,redeemSavings,rateFeedback} from './economy-effects.js';
 import {ensureAgents,agentRound} from './town-agents.js';
 // Pure economic rules. Scene adapters supply identities and availability; no renderer dependency.
 import {transfer,event} from './economy-ledger.js';
@@ -13,7 +14,7 @@ export function sectorOf(d){
 }
 const finite=n=>Number.isSafeInteger(n)&&n>=0;
 export function validWorld(w){
-  return !!w&&w.version===1&&typeof w.enabled==='boolean'&&[1,2,4,8,16].includes(w.speed)&&Array.isArray(w.places)&&w.places.length<=2000&&new Set(w.places.map(d=>d.id)).size===w.places.length&&w.places.every(d=>typeof d.id==='string'&&/^[\w:.-]+$/.test(d.id)&&!['__proto__','constructor','prototype'].includes(d.id)&&typeof d.name==='string'&&Object.hasOwn(SECTOR_NAMES,d.sector)&&Number.isFinite(d.x)&&Number.isFinite(d.z))&&(!w.history||Array.isArray(w.history))&&(!w.assets||Array.isArray(w.assets));
+  return !!w&&w.version===1&&typeof w.enabled==='boolean'&&[1,2,4,8,16].includes(w.speed)&&Array.isArray(w.places)&&w.places.length<=2000&&new Set(w.places.map(d=>d.id)).size===w.places.length&&w.places.every(d=>typeof d.id==='string'&&/^[\w:.-]+$/.test(d.id)&&!['__proto__','constructor','prototype'].includes(d.id)&&typeof d.name==='string'&&Object.hasOwn(SECTOR_NAMES,d.sector)&&Number.isFinite(d.x)&&Number.isFinite(d.z))&&(!w.history||Array.isArray(w.history))&&(!w.assets||Array.isArray(w.assets))&&(w.priceAnchor===undefined||Number.isFinite(w.priceAnchor)&&w.priceAnchor>=1&&w.priceAnchor<=100000)&&(w.priceIndex===undefined||Number.isFinite(w.priceIndex)&&w.priceIndex>=.4&&w.priceIndex<=8);
 }
 export function attachWorld(e,places){
   const seen=new Set(),defs=[];
@@ -35,7 +36,7 @@ export function attachWorld(e,places){
     for(const source of ['producer','shop']){const budget=e[source],each=Math.floor(budget/targets.length);for(const d of targets)if(each)transfer(e,source,'i:'+d.id,each,'原产业资金分配');}
     e.world.seeded=true;
   }
-  ensureAgents(e);snapshotEconomy(e);
+  ensureAgents(e);initEffects(e);snapshotEconomy(e);
 }
 export function worldService(e,id,nt,reason,owner='player'){
   const b=e.industries?.[id];if(!b||!b.open)return false;
@@ -45,7 +46,7 @@ export function worldService(e,id,nt,reason,owner='player'){
   e.metrics.sales+=(currency==='beta'?paid*exchangeRate(e):paid);b.roundSales=(b.roundSales||0)+nt;return true;
 }
 const shopFor=where=>({mart:'shop',cloth:'cloth'}[where]||where);
-export function itemQuote(e,where,id,base){const b=e.industries?.[shopFor(where)];const nt=Math.max(1,Math.round(base*(1+e.issued/15000)));return {nt,currency:e.coinMode?(b?.currency||'beta'):'ntd',amount:e.coinMode&&b?.currency==='beta'?toCoins(e,nt):nt,stock:Math.min(b?.items?.[id]??5,b?.stock??0)};}
+export function itemQuote(e,where,id,base){const b=e.industries?.[shopFor(where)];const nt=Math.max(1,Math.round(base*(e.world?.priceIndex||1)*(1+e.issued/15000)));return {nt,currency:e.coinMode?(b?.currency||'beta'):'ntd',amount:e.coinMode&&b?.currency==='beta'?toCoins(e,nt):nt,stock:Math.min(b?.items?.[id]??5,b?.stock??0)};}
 export function tradeItem(e,where,id,quantity,side,base){
   const key=shopFor(where),b=e.industries?.[key];if(!e.world?.enabled||!b?.open||!finite(quantity)||!quantity||!finite(base)||!['buy','sell'].includes(side))return false;
   b.items ||= {};const q=itemQuote(e,where,id,base),stock=b.items[id]??5;
@@ -67,24 +68,24 @@ export function fundAll(e,amount,currency='ntd'){
 function outputKind(s){return ['farm','food','tools','recycling'].includes(s);}
 export function worldRound(e){
   const w=e.world;if(!w?.enabled)return;
-  ensureIndustries(e);ensureAgents(e);const ds=w.places,active=e.households.filter(h=>h.active!==false),rate=exchangeRate(e);
+  ensureIndustries(e);ensureAgents(e);updatePrices(e);const ds=w.places,active=e.households.filter(h=>h.active!==false).sort((a,b)=>(a.cash+(e.crypto.holders['h:'+a.id]||0)*exchangeRate(e))-(b.cash+(e.crypto.holders['h:'+b.id]||0)*exchangeRate(e))),rate=exchangeRate(e);
   const bySector={};for(const d of ds)(bySector[d.sector] ||= []).push(d);
   const assets=w.assets||[],transport=assets.filter(a=>a.kind==='vehicle'&&a.available),livestock=assets.filter(a=>a.kind==='animal'&&a.available&&['rooster','goose','buffalo'].includes(a.type));
   const workingTransport=transport.filter(a=>a.moving||a.assigned).length;
   const m=e.metrics;Object.assign(m,{gdp:0,services:0,tax:0,unpaid:0,logistics:workingTransport,active:active.length});
-  for(const d of ds){const b=e.industries[d.id];b.roundPayroll=0;b.roundCosts=0;b.roundTax=0;b.staff=0;b.reserved=0;b.roundSales=b.pendingSales||0;b.pendingSales=0;b.roundOutput=0;b.reason=b.open?(b.cash+(e.crypto.holders['i:'+d.id]||0)*rate<28?'缺少运营资金':(['housing','storage'].includes(d.sector)?'无需员工':'等待招聘')):'已停业';}
+  for(const d of ds){const b=e.industries[d.id];b.previousSales=b.roundSales||0;b.staffGoal=Math.min(b.capacity,Math.max(1,Math.ceil(b.previousSales/Math.max(12,b.wage||20)*.65)));b.roundPayroll=0;b.roundCosts=0;b.roundTax=0;b.staff=0;b.reserved=0;b.roundSales=b.pendingSales||0;b.pendingSales=0;b.roundOutput=0;b.reason=b.open?(b.cash+(e.crypto.holders['i:'+d.id]||0)*rate<(b.wage||12)?'缺少运营资金':(['housing','storage'].includes(d.sector)?'无需员工':'等待招聘')):'已停业';}
   const employable=ds.filter(d=>!['housing','storage'].includes(d.sector)&&e.industries[d.id].open);
   // Job vacancies follow existing scene roles. Residents may change employers when firms run out of cash.
   for(const h of active){
-    const owner='h:'+h.id;h.hunger=Math.min(10,h.hunger+1);h.roundIncome=0;h.working=false;h.job='work';
+    const owner='h:'+h.id;h.hunger=Math.min(10,h.hunger+1);h.roundStartCash=h.cash;h.roundIncome=0;h.working=false;h.job='work';
     if(h.unavailable||(e.government?.strike&&h.id%4===0)){m.unpaid++;continue;}
     const preferred=h.role==='cop'?'public':h.role==='driver'?'transport':h.role==='dancer'?'leisure':h.role==='farmer'?'farm':null;
     let candidates=preferred?(bySector[preferred]||[]):employable;
     const last=ds.find(d=>d.id===h.industry);
     candidates=[...(last&&e.industries[last.id].open?[last]:[]),...candidates.slice(h.id%candidates.length),...candidates.slice(0,h.id%candidates.length)];
-    const d=candidates.find(d=>{const b=e.industries[d.id];return b.open&&b.staff+(b.reserved||0)<b.capacity&&(b.cash+(e.crypto.holders['i:'+d.id]||0)*rate)>=(b.wage||28)+(h.ability-1)*3;});
+    const d=candidates.find(d=>{const b=e.industries[d.id];return b.open&&b.staff+(b.reserved||0)<b.staffGoal&&(b.cash+(e.crypto.holders['i:'+d.id]||0)*rate)>=(b.wage||12)+(h.ability-1)*2;});
     if(!d){h.job='rest';m.unpaid++;continue;}
-    const b=e.industries[d.id],currency=e.coinMode?b.currency:'ntd',baseWage=(b.wage||28)+(h.ability-1)*3;
+    const b=e.industries[d.id],currency=e.coinMode?b.currency:'ntd',baseWage=(b.wage||12)+(h.ability-1)*2;
     if(w.district?.includes(d.id)&&h.role==='ped'&&h.location){h.industry=d.id;const at=d.entrance||d;if(Math.hypot(h.location.x-at.x,h.location.z-at.z)>10){h.job='commute';b.reserved++;b.reason='员工通勤中';continue;}}
     if(!settle(e,'i:'+d.id,owner,baseWage,currency,'工资 · '+d.name)){b.reason='无法支付工资 / 兑换池不足';m.unpaid++;continue;}
     const wage=currency==='beta'?toCoins(e,baseWage):baseWage;b[currency==='beta'?'wages':'wagesNT']+=wage;b.roundPayroll+=baseWage;h.roundIncome=currency==='ntd'?baseWage:0;b.staff++;m.workers++;m.wages+=currency==='beta'?wage*rate:wage;h.working=true;if(h.industry!==d.id)event(e,'就业',h.name+' 入职 '+d.name,{resident:h.id,industry:d.id});h.industry=d.id;b.reason='营业中';
@@ -110,18 +111,18 @@ export function worldRound(e){
   }
   for(const h of active){
     const owner='h:'+h.id;
-    for(const sector of ['food',...(e.round%3===h.id%3?['health','leisure','retail']:[])]){
-      const list=(bySector[sector]||[]).filter(d=>{const b=e.industries[d.id];return b.open&&b.staff>0&&b.stock>0;});if(!list.length)continue;
-      const d=list[(h.id+e.round)%list.length],b=e.industries[d.id],price=sector==='food'?12:8;
+    for(const sector of ['food',...(e.round%2===h.id%2?[[ 'health','leisure','retail','tools','recycling','transport'][(h.id+Math.floor(e.round/2))%6]]:[])]){
+      const list=(sector==='food'?[...(bySector.food||[]),...(bySector.farm||[])]:bySector[sector]||[]).filter(d=>{const b=e.industries[d.id];return b.open&&b.staff>0&&b.stock>0;});if(!list.length)continue;
+      const d=list[(h.id+e.round)%list.length],b=e.industries[d.id],price=consumerPrice(e,sector==='food'?12:8);redeemSavings(e,h,price);if(sector!=='food'&&h.cash<60+price)continue;
       if(w.district?.includes(d.id)&&h.role==='ped'&&h.location){if(!h.visit)h.visit={industry:d.id,price,sector,created:e.round};continue;}
       if(worldService(e,d.id,price,'居民消费 · '+d.name,owner)){b.stock--;b.units++;if(sector==='food')h.hunger=Math.max(0,h.hunger-2);else h.serviceVisits=(h.serviceVisits||0)+1;}
     }
     // Housing is an occupied asset, not a producer; rent only with a funded household.
-    const homes=bySector.housing||[];if(homes.length&&e.round%4===h.id%4){const d=homes[h.id%homes.length];worldService(e,d.id,4,'住房租金',owner);}
+    const homes=bySector.housing||[];if(homes.length&&e.round%4===h.id%4){const d=homes[h.id%homes.length];worldService(e,d.id,consumerPrice(e,4),'住房租金',owner);}
   }
   // Civic funding is transferred from business taxes, never fabricated.
-  for(const d of ds){const b=e.industries[d.id];const tax=Math.floor(b.roundSales*(e.government.policy==='减税'?.04:.08));if(tax&&transfer(e,'i:'+d.id,'i:civic',tax,'经营税')){m.tax+=tax;b.roundTax=tax;}
-    if(b.cash>=300&&b.staff>=b.capacity&&b.level<5&&transfer(e,'i:'+d.id,'producer',100,'设备扩建')){b.roundCosts+=100;b.level++;b.capacity++;event(e,'发展',d.name+' 扩建至 '+b.level+' 级');}
+  for(const d of ds){const b=e.industries[d.id];const tax=Math.floor(b.roundSales*(e.government.policy==='减税'?.08:.12));if(tax&&transfer(e,'i:'+d.id,'i:civic',tax,'经营税')){m.tax+=tax;b.roundTax=tax;}
+    const builder=(bySector.tools||[]).find(q=>q.id!==d.id&&e.industries[q.id].open);if(b.cash>=300&&(b.profit||0)>30&&b.previousSales>(b.wage||12)*b.staff&&b.staff>0&&b.level<5&&transfer(e,'i:'+d.id,builder?'i:'+builder.id:'producer',100,'设备扩建')){if(builder)e.industries[builder.id].roundSales+=100;b.roundCosts+=100;b.level++;b.capacity++;event(e,'发展',d.name+' 扩建至 '+b.level+' 级');}
   }
   agentRound(e);
   // Working animals need feed; vehicles need upkeep. Their service availability feeds next round.
@@ -135,6 +136,7 @@ export function worldRound(e){
   w.wellbeing=assets.filter(a=>a.kind==='animal'&&['cat','dog'].includes(a.type)&&a.available&&e.round-(a.fed??-10)<5).length;
   if(w.unpaidRewards>0&&e.bank>100){const pay=Math.min(w.unpaidRewards,e.bank-100);if(transfer(e,'bank','player',pay,'结清任务奖励'))w.unpaidRewards-=pay;}
   for(const d of ds){const b=e.industries[d.id];if(b.reason!==b.loggedReason){event(e,'产业',d.name+'：'+b.reason,{industry:d.id});b.loggedReason=b.reason;}}
+  rateFeedback(e);
   event(e,'轮次','GDP NT$'+m.gdp+' · 就业 '+m.workers+'/'+active.length+' · 产出 '+m.production+' · 未获工资 '+m.unpaid,{gdp:m.gdp,workers:m.workers,production:m.production});
   for(const d of e.pendingDecisions||[])if(e.round>d.round)event(e,'决策反馈',d.message+' 后：就业 '+d.workers+' → '+m.workers+'，GDP '+d.gdp+' → '+m.gdp+'，产出 '+d.production+' → '+m.production+'。这是同期变化，可能受其他事件共同影响。',{decisionId:d.id,industry:d.industry,location:d.location});
   e.pendingDecisions=(e.pendingDecisions||[]).filter(d=>e.round<=d.round);
@@ -152,7 +154,9 @@ export function finishVisit(e,h){
  if(!h.location||Math.hypot(h.location.x-at.x,h.location.z-at.z)>7)return false;
  delete h.visit;
  if(!b.open||!b.staff||b.stock<1){event(e,'消费',h.name+' 到达 '+d.name+'，因'+(!b.open?'停业':!b.staff?'无人营业':'缺货')+'未能消费',{industry:d.id,resident:h.id});return false;}
+ visit.price=consumerPrice(e,visit.sector==='food'?12:8);
  const beforeSales=e.metrics.sales||0;
+ redeemSavings(e,h,visit.price);
  if(!worldService(e,d.id,visit.price,'到店消费 · '+d.name,'h:'+h.id)){event(e,'消费',h.name+' 到店但支付不足',{industry:d.id,resident:h.id});return false;}
  b.stock--;b.units++;b.pendingSales=(b.pendingSales||0)+visit.price;e.world.totals.sales+=(e.metrics.sales||0)-beforeSales;b.visitors=(b.visitors||0)+1;if(visit.sector==='food')h.hunger=Math.max(0,h.hunger-2);
  event(e,'消费',h.name+' 到达 '+d.name+'，消费 NT$'+visit.price,{industry:d.id,resident:h.id});snapshotEconomy(e);return true;

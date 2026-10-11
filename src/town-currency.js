@@ -27,7 +27,7 @@ export function coinTransfer(e,from,to,amount,reason){
 export const exchangeRate=e=>e.ratePolicy?.mode==='fixed'?e.ratePolicy.value:e.crypto.price;
 export function setExchangeRate(e,mode,value){
   if(!['fixed','market'].includes(mode)||mode==='fixed'&&(!Number.isSafeInteger(value)||value<1||value>100000))return false;
-  const previous=exchangeRate(e);decision(e,'汇率 '+previous+' → '+(mode==='fixed'?value:e.crypto.price)+'（'+(mode==='fixed'?'固定':'市场')+'）');e.ratePolicy={mode,value:mode==='fixed'?value:e.crypto.price};
+  const previous=exchangeRate(e);const row=decision(e,'汇率 '+previous+' → '+(mode==='fixed'?value:e.crypto.price)+'（'+(mode==='fixed'?'固定':'市场')+'）');if(e.world)e.rateImpact={round:e.round,decisionId:row.id,rate:previous,workers:e.metrics.workers||0,gdp:e.metrics.gdp||0,approval:e.government?.approval??65,sales:e.issuerSalesNT||0,redemptions:e.issuerRedemptionsNT||0,dividends:e.playerDividends||0,wealth:e.households.filter(h=>h.active!==false).map(h=>({id:h.id,cash:h.cash,coins:e.crypto.holders['h:'+h.id]||0}))};if(e.world)e.world.lastRateFeedback='汇率已调整，下一轮开始反馈消费、就业和实际收支。';e.ratePolicy={mode,value:mode==='fixed'?value:e.crypto.price};
   e.rateHistory ||= [];e.rateHistory.unshift({round:e.round,mode,previous,value:exchangeRate(e)});e.rateHistory.length=Math.min(60,e.rateHistory.length);return true;
 }
 export const toCoins=(e,nt)=>Math.max(1,Math.ceil(nt/exchangeRate(e)));

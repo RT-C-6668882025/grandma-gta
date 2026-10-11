@@ -11,7 +11,7 @@ export function initDistrict(e,roads=[]){
  }
 }
 export const inDistrict=(e,id)=>e.world?.district?.includes(id);
-export function shopState(e,id){const b=e.industries[id];return !b.open?'已停业':b.stock<=0?'缺货':!b.staff?(b.cash+(e.crypto.holders['i:'+id]||0)*exchangeRate(e)<(b.wage||28)?'资金不足':'等待员工到岗'):'营业中';}
+export function shopState(e,id){const b=e.industries[id];return !b.open?'已停业':b.stock<=0?'缺货':!b.staff?(b.cash+(e.crypto.holders['i:'+id]||0)*exchangeRate(e)<(b.wage||12)?'资金不足':'等待员工到岗'):b.businessState||'营业中';}
 export function shopDecision(e,id,action,amount=100){
  const b=e.industries?.[id],d=e.world?.places.find(d=>d.id===id);if(!b||!d)return false;
  let message='';
@@ -22,4 +22,4 @@ export function shopDecision(e,id,action,amount=100){
  const row=decision(e,d.name+'：'+message,{industry:id,location:d.entrance||d});b.lastDecisionId=row.id;
  event(e,'产业',d.name+' '+message,{industry:id,decisionId:row.id,location:d.entrance||d});return true;
 }
-export function payrollQuote(e,id){const b=e.industries[id],nt=b.wage||28;return e.coinMode&&b.currency==='beta'?toCoins(e,nt)+' GOD / 人':nt+' NT$ / 人';}
+export function payrollQuote(e,id){const b=e.industries[id],nt=b.wage||12;return e.coinMode&&b.currency==='beta'?toCoins(e,nt)+' GOD / 人':nt+' NT$ / 人';}
