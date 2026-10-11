@@ -1,3 +1,4 @@
+import {regionAt} from '../city-regions.js';
 import {economyPlaces} from './town.js';
 // Street furniture that makes 番薯寮 read as a busy suburban town rather than
 // open countryside: traffic lights that actually cycle (and that traffic
@@ -82,7 +83,7 @@ const CANDIDATES = [
 function buildFlags(k) {
   const boards = CANDIDATES.map(([t, bg, fg]) => drawSign(t, { bg, fg, border: '#fff' }, true));
   for (let x = -220; x <= 220; x += 30) for (const [px, pz] of [[x, -6.4], [x + 15, 6.4]]) {
-    if (R() < 0.25) continue;
+    if(regionAt(px,pz).style!=='neon'||R()<.25)continue;
     const b = boards[Math.floor(R() * boards.length)];
     k.box(px, 3.0, pz, 0.04, 0.04, 0.7, C.greyD);
     k.sign(px, 3.05, pz + 0.35, 0.62, 2.3, b, Math.PI / 2, { back: true });
@@ -101,7 +102,7 @@ const ADS = [
   ['番薯寮農會 · 豐收', '#2a6a3a', '#fff', '肥料 · 農藥 · 存款 · 保險'],
 ];
 function buildBillboards(k) {
-  const tall = rowUnits.filter((u) => u.top > 8);
+  const tall = rowUnits.filter((u) => u.top > 8&&regionAt(u.x,0).style==='neon');
   let n = 0;
   for (let i = 0; i < tall.length; i += 5) {
     const u = tall[i];

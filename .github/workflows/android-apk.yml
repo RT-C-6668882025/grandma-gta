@@ -53,13 +53,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v1.15-economy >/dev/null 2>&1; then exit 0; fi
+          if gh release view v1.16-districts >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
           手机 / 平板通用版 · Android 8.0+，固定签名，可覆盖安装稳定版。
-          汇率变化逐步传导到物价、购买力、消费、招聘与政府满意度。居民缺少生活现金时，按玩家实际储备兑现 GOD。
-          按生意安排岗位，优先给财富较少的居民工作机会；按生活消费后的结余积累 GOD，小额收入跨轮累积。
-          设备扩建付款流向本镇制造维修商，扩建需要已有利润；保留默认经营循环与实际资金守恒。
-          汇率调整后的第 1、3、6 轮反馈就业、GDP、满意度、持仓估值变化，以及玩家售币收入、兑现支出、分红及实际净收。日志名称不变。
-          134 项自动测试通过，包括正常经济 80 轮、汇率冲击对照、存档兼容与双币守恒。数值平衡仍需真机游玩反馈。
+          城市背景：全球发展最快的城市。现有可游玩规划边界内，澄湾区 30%、榆庭区 45%、东埠区 25%。
+          澄湾：低层玻璃立面、绿化及简洁招牌；榆庭：浅色石材、拱廊、阳台和坡屋顶；东埠：密集招牌、廉价霓虹与外露设备。
+          地图显示分区边界与可导航/瞬移的区域标记，店铺、导航及新日志事件使用一致地区名称。
+          137 项自动测试通过；经济账户及旧存档保持兼容。建筑与街景为首轮改造，原任务、角色及部分地标保留。
           NOTES
-          gh release create v1.15-economy android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 1.15 · 汇率与经济反馈' --notes-file notes.md
+          gh release create v1.16-districts android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 1.16 · 城市三区' --notes-file notes.md

@@ -1,3 +1,4 @@
+import {regionAt} from './city-regions.js';
 import {initEffects,updatePrices,consumerPrice,redeemSavings,rateFeedback} from './economy-effects.js';
 import {ensureAgents,agentRound} from './town-agents.js';
 // Pure economic rules. Scene adapters supply identities and availability; no renderer dependency.
@@ -27,7 +28,7 @@ export function attachWorld(e,places){
   // Preserve removed model accounts in the registry rather than losing saved balances.
   for(const id of Object.keys(e.industries||{}))if(!seen.has(id)){e.world.places.push({id,name:'存档资产 '+id,sector:'storage',kind:'archive',x:0,z:0});}
   ensureIndustries(e);
-  for(const d of e.world.places){const b=e.industries[d.id];b.sector=d.sector;b.stock=finite(b.stock)?b.stock:12;b.level=finite(b.level)&&b.level>=1?b.level:1;b.capacity=finite(b.capacity)?b.capacity:4;b.units=finite(b.units)?b.units:0;b.items ||= {};b.cash ??=0;b.currency=e.coinMode?b.currency:'ntd';b.reason='等待生产轮次';}
+  for(const d of e.world.places){const b=e.industries[d.id];const r=regionAt(d.x,d.z);d.region=r.id;d.regionName=r.name;b.sector=d.sector;b.stock=finite(b.stock)?b.stock:12;b.level=finite(b.level)&&b.level>=1?b.level:1;b.capacity=finite(b.capacity)?b.capacity:4;b.units=finite(b.units)?b.units:0;b.items ||= {};b.cash ??=0;b.currency=e.coinMode?b.currency:'ntd';b.reason='等待生产轮次';}
   if(!e.world.seeded){
     // Move the original producer/retail working capital; never issue money implicitly.
     const candidates=e.world.places.filter(d=>!['housing','storage'].includes(d.sector));

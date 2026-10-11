@@ -1,0 +1,1 @@
+export function signSlot(index,vertical=false){const capacity=vertical?128:512;if(!Number.isInteger(index)||index<0||index>=capacity)throw new Error('Sign atlas capacity exceeded');return vertical?{x:(index%32)*128,y:2048+Math.floor(index/32)*512,w:128,h:512,scale:1}:{x:(index%16)*256,y:Math.floor(index/16)*64,w:256,h:64,scale:.5};}

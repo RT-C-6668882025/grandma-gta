@@ -1,3 +1,4 @@
+import {signSlot} from '../sign-atlas-layout.js';
 // Building kit: primitives with baked vertex colours, merged per district into a
 // few meshes. Three materials: plain (MAT), mosaic tile facades (TILE — the
 // little square tiles of every Taiwanese 透天厝, drawn in world space) and
@@ -126,7 +127,7 @@ const SERIF = '"Songti TC","STSong","Noto Serif TC",serif';
 // style: {bg, fg, border, sub, font}
 const signCache = new Map();
 export function drawSign(text, style = {}, vertical = false) {
-  // identical signs share one atlas cell (the atlas holds 128 horizontal + 128 vertical cells)
+  // identical signs share one atlas cell (the atlas holds 512 horizontal + 128 vertical cells)
   const key = JSON.stringify([text, style, vertical]);
   if (signCache.has(key)) return signCache.get(key);
   const uv = drawSignCell(text, style, vertical);
@@ -135,13 +136,10 @@ export function drawSign(text, style = {}, vertical = false) {
 }
 function drawSignCell(text, style, vertical) {
   const w = vertical ? 128 : 512, h = vertical ? 512 : 128;
-  if ((vertical ? cellV : cellH) >= 128) console.warn('sign atlas full, reusing cells');
-  let x, y;
-  if (vertical) { x = (cellV % 32) * 128; y = 2048 + Math.floor((cellV % 128) / 32) * 512; cellV++; }
-  else { x = (cellH % 8) * 512; y = Math.floor((cellH % 128) / 8) * 128; cellH++; }
-  const g = actx;
-  g.save();
-  g.beginPath(); g.rect(x, y, w, h); g.clip();
+  const slot=signSlot(vertical?cellV++:cellH++,vertical),scale=slot.scale;
+  const x=slot.x/scale,y=slot.y/scale;
+  const g=actx;g.save();g.scale(scale,scale);
+  g.beginPath();g.rect(x,y,w,h);g.clip();
   const bg = style.bg || '#c8231c';
   if (Array.isArray(bg)) { const gr = g.createLinearGradient(x, y, x, y + h); bg.forEach((c, i) => gr.addColorStop(i / (bg.length - 1), c)); g.fillStyle = gr; }
   else g.fillStyle = bg;
@@ -166,19 +164,17 @@ function drawSignCell(text, style, vertical) {
   }
   g.restore();
   SIGN_TEX.needsUpdate = true;
-  return [x / ATLAS, 1 - (y + h) / ATLAS, (x + w) / ATLAS, 1 - y / ATLAS];
+  return [slot.x/ATLAS,1-(slot.y+slot.h)/ATLAS,(slot.x+slot.w)/ATLAS,1-slot.y/ATLAS];
 }
 // small pictures (roll-up door stripes, posters) share the atlas too
 export function drawPic(fn, vertical = false) {
   const w = vertical ? 128 : 512, h = vertical ? 512 : 128;
-  let x, y;
-  if (vertical) { x = (cellV % 32) * 128; y = 2048 + Math.floor(cellV / 32) * 512; cellV++; }
-  else { x = (cellH % 8) * 512; y = Math.floor(cellH / 8) * 128; cellH++; }
-  actx.save(); actx.beginPath(); actx.rect(x, y, w, h); actx.clip(); actx.translate(x, y);
+  const slot=signSlot(vertical?cellV++:cellH++,vertical),scale=slot.scale,x=slot.x/scale,y=slot.y/scale;
+  actx.save();actx.scale(scale,scale);actx.beginPath();actx.rect(x,y,w,h);actx.clip();actx.translate(x,y);
   fn(actx, w, h);
   actx.restore();
   SIGN_TEX.needsUpdate = true;
-  return [x / ATLAS, 1 - (y + h) / ATLAS, (x + w) / ATLAS, 1 - y / ATLAS];
+  return [slot.x/ATLAS,1-(slot.y+slot.h)/ATLAS,(slot.x+slot.w)/ATLAS,1-slot.y/ATLAS];
 }
 
 export class Kit {

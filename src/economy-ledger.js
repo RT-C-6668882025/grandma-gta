@@ -1,3 +1,4 @@
+import {regionAt} from './city-regions.js';
 export const cashOf=(e,owner)=>owner==='cryptoEscrow'?(e.cryptoEscrow||0):owner.startsWith('i:')?e.industries?.[owner.slice(2)]?.cash:owner.startsWith('h:')?e.households[+owner.slice(2)]?.cash:e[owner];
 function setCash(e,owner,value){if(owner.startsWith('i:'))e.industries[owner.slice(2)].cash=value;else if(owner.startsWith('h:'))e.households[+owner.slice(2)].cash=value;else e[owner]=value;}
 export function record(e,from,to,amount,reason){
@@ -16,6 +17,7 @@ export const accountLabel=owner=>({player:'阿嬤',bank:'公庫 / 兌換池',pro
 export function event(e,type,message,details={}){
   e.events ||= [];e.eventSerial=(e.eventSerial||0)+1;
   const owner=[details.to,details.from].find(o=>o?.startsWith('i:'));const industry=details.industry||owner?.slice(2),place=e.world?.places.find(d=>d.id===industry);
+  if(place){const r=regionAt(place.x,place.z);details={region:r.id,regionName:r.name,...details};if(!message.startsWith('['+r.name+']'))message='['+r.name+'] '+message;}
   if(place)details={location:place.entrance||{x:place.x,z:place.z},industry,decisionId:type==='决策'?undefined:e.industries[industry]?.lastDecisionId,...details};
   const row={id:e.eventSerial,round:e.round,type,message,...details};
   e.events.unshift(row);if(e.events.length>10000)e.events.length=10000;return row;

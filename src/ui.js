@@ -1,3 +1,4 @@
+import {CITY_REGIONS} from './city-regions.js';
 import {event} from './economy-ledger.js';
 import {itemQuote} from './world-economy.js';
 import {canPay,shopCurrency,fiatPrice,coinPrice} from './town-currency.js';
@@ -268,6 +269,7 @@ function drawBase(k) {
   const c = cv.getContext('2d');
   const X = (x) => (x + HALF) * k;
   c.fillStyle = '#3d4d36'; c.fillRect(0, 0, S, S);
+  for(const r of CITY_REGIONS){c.fillStyle=r.color+'35';c.fillRect(X(r.minX),X(r.minZ),(r.maxX-r.minX)*k,(r.maxZ-r.minZ)*k);}
   c.fillStyle = '#45603c';
   for (const p of PADDIES) c.fillRect(X(p.x0), X(p.z0), (p.x1 - p.x0) * k, (p.z1 - p.z0) * k);
   c.fillStyle = '#5a5a52';

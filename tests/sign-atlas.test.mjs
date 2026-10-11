@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';
+const code=await readFile(new URL('../src/sign-atlas-layout.js',import.meta.url),'utf8');const {signSlot}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
+test('all regional signs occupy unique atlas cells within the original 4096 texture',()=>{const cells=[];for(let i=0;i<512;i++)cells.push(signSlot(i));for(let i=0;i<128;i++)cells.push(signSlot(i,true));for(const s of cells){assert.ok(s.x>=0&&s.y>=0&&s.x+s.w<=4096&&s.y+s.h<=4096);}for(let i=0;i<cells.length;i++)for(let j=i+1;j<cells.length;j++){const a=cells[i],b=cells[j];assert.ok(a.x+a.w<=b.x||b.x+b.w<=a.x||a.y+a.h<=b.y||b.y+b.h<=a.y);}assert.throws(()=>signSlot(512));});

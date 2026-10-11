@@ -1,3 +1,4 @@
+import {regionAt,CITY_REGIONS} from '../city-regions.js';
 // 番薯寮 town builder: arcade shophouses (騎樓透天厝) along 中正路, the corner
 // shop, hardware store, police box, temple and square, the courtyard house,
 // station, school, recycling yard, betel-nut stand, electric poles and wires,
@@ -58,21 +59,22 @@ function shophouse(k, cx, cz, ry, w, o = {}) {
   const W = (lx, lz) => [cx + lx * c + lz * s, cz - lx * s + lz * c];
   const y0 = o.y ?? 0;
   const gh = 3.6, fh = 3.25;
-  const n = o.floors ?? (2 + Math.floor(R() * 3.2));
+  const district=regionAt(cx,cz),neon=district.style==='neon',europe=district.style==='europe',campus=district.style==='campus';
+  const n = campus?2:o.floors ?? (europe?3+Math.floor(R()*2):2+Math.floor(R()*3.2));
   const depth = o.depth ?? 14;
-  const face = o.color ?? pick(FACADE);
+  const face = campus?pick([0xe4ece8,0xbac8c6,0xd5dfe0]):europe?pick([0xded5c3,0xe8dfcf,0xc9bfae,0xd7c6ad]):o.color ?? pick(FACADE);
   const top = gh + (n - 1) * fh;
   const open = o.open ?? R() < 0.55;
   const inset = open ? 7 : 3; // open shops have a deep lit interior
   const B = (lx, ly, lz, bw, bh, bd, col, oo = {}) => { const [x, z] = W(lx, lz); k.box(x, y0 + ly, z, bw, bh, bd, col, ry, oo); };
   // upper block (tiles), arcade ceiling, ground body behind the shopfront
-  B(0, gh, -depth / 2, w, top - gh, depth, face, { tile: true, collide: false });
+  B(0, gh, -depth / 2, w, top - gh, depth, face, { tile: neon, collide: false });
   B(0, gh - 0.35, -1.5, w, 0.35, 3, C.concrete);
   B(0, 0, -(inset + depth) / 2, w, gh, depth - inset, C.concreteD, { collide: true });
   // columns: square, tiled like the facade
   for (const sd of [-1, 1]) {
     const lx = sd * (w / 2 - 0.25);
-    B(lx, 0, -0.25, 0.5, gh - 0.35, 0.5, o.colColor ?? face, { tile: true });
+    B(lx, 0, -0.25, 0.5, gh - 0.35, 0.5, o.colColor ?? face, { tile: neon });
     const [x, z] = W(lx, -0.25); addBox(x, z, 0.25, 0.25, ry, gh);
   }
   // step at the arcade edge
@@ -147,10 +149,10 @@ function shophouse(k, cx, cz, ry, w, o = {}) {
   economyPlaces.push({id:o.special || 'building:'+economyPlaces.length,name,x:cx,z:cz,kind:o.sub?.includes('住戶')||['永和社區','番薯寮新村','幸福大廈'].includes(name)?'housing':'business',special:o.special});
   // each shop name always gets the same board (so identical boards share one atlas cell)
   const hn = [...name].reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0;
-  const uv = drawSign(name, { bg: o.signBg || sh[1], fg: o.signFg || sh[2], border: hn % 2 ? 'rgba(255,255,255,0.6)' : null, sub: o.sub || (hn % 5 < 2 ? ['電話：(05)2-XXXXX', '營業中', '老店 · 四十年', '批發零售', '歡迎光臨'][hn % 5] : null) });
+  const uv = drawSign(name, { bg: neon?(o.signBg||sh[1]):campus?'#e8eeeb':'#e8ddc8', fg: neon?(o.signFg||sh[2]):campus?'#254d4b':'#493b2c', border: hn % 2 ? 'rgba(255,255,255,0.6)' : null, sub: neon?(o.sub || (hn % 5 < 2 ? ['電話：(05)2-XXXXX', '營業中', '老店 · 四十年', '批發零售', '歡迎光臨'][hn % 5] : null)):district.name });
   { const [x, z] = W(0, 0.12); k.box(x, y0 + gh + 0.02, z, w - 0.2, 1.05, 0.2, C.greyD, ry); const [x2, z2] = W(0, 0.23); k.sign(x2, y0 + gh + 0.08, z2, w - 0.4, 0.93, uv, ry); }
   // vertical protruding sign
-  if (R() < 0.55 && n >= 3) {
+  if (neon && R() < 0.75 && n >= 3) {
     const sh2 = SHOPS[(shopI * 7) % SHOPS.length];
     const vuv = drawSign(sh2[0].slice(0, 5), { bg: sh2[1], fg: sh2[2], border: '#fff' }, true);
     const side = R() < 0.5 ? -1 : 1, lx = side * (w / 2 - 0.3), yb = gh + 1.3, hh = Math.min(3.8, top - yb - 0.3);
@@ -163,27 +165,27 @@ function shophouse(k, cx, cz, ry, w, o = {}) {
   for (let f = 1; f < n; f++) {
     const fy = gh + (f - 1) * fh;
     const wins = w > 5 ? 2 : 1;
-    const balcony = f === 1 && R() < 0.3;
+    const balcony = !campus&&f===1&&(europe||R()<.3);
     if (balcony) {
       B(0, fy - 0.05, 0.45, w - 0.3, 0.15, 0.9, C.concrete);
       B(0, fy + 0.1, 0.86, w - 0.3, 1.0, 0.06, C.grey, { metal: true });
-      if (R() < 0.7) { for (let i = 0; i < 4; i++) B(-w / 2 + 1 + i * 0.9, fy + 1.3, 0.6, 0.5, 0.7, 0.02, pick([C.red, C.blue, C.white, C.yellow, 0xe070a0])); B(0, fy + 2.0, 0.6, w - 0.6, 0.03, 0.03, C.steel, { metal: true }); }
+      if (neon&&R() < 0.7) { for (let i = 0; i < 4; i++) B(-w / 2 + 1 + i * 0.9, fy + 1.3, 0.6, 0.5, 0.7, 0.02, pick([C.red, C.blue, C.white, C.yellow, 0xe070a0])); B(0, fy + 2.0, 0.6, w - 0.6, 0.03, 0.03, C.steel, { metal: true }); }
       if (R() < 0.6) for (let i = 0; i < 3; i++) { const [px, pz] = W(-w / 2 + 0.8 + i * 1.1, 0.6); k.cyl(px, y0 + fy + 0.1, pz, 0.2, 0.15, 0.3, C.brick, 8); k.sphere(px, y0 + fy + 0.55, pz, 0.28, C.leaf); }
     }
     for (let i = 0; i < wins; i++) {
       const lx = wins === 1 ? 0 : (i - 0.5) * (w / 2);
-      const ww = Math.min(2.2, w / wins - 0.9), wh = 1.5;
+      const ww = campus?w/wins-.5:Math.min(2.2,w/wins-.9),wh=campus?2.2:europe?1.9:1.5;
       B(lx, fy + 0.9, 0.01, ww + 0.16, wh + 0.16, 0.06, 0xd8dcdc);
-      const [gx, gz] = W(lx, 0.05); k.box(gx, y0 + fy + 0.98, gz, ww, wh, 0.03, C.glass, ry, { win: true });
+      const [gx, gz] = W(lx, 0.05); k.box(gx, y0 + fy + 0.98, gz, ww, wh, 0.03, campus?0x8cafb1:europe?0x456367:C.glass, ry, { win: true });
       // iron grille cage (鐵窗)
-      if (!balcony && R() < 0.75) {
+      if (neon&&!balcony && R() < 0.75) {
         const gc = pick([C.steel, 0x6a7a6a, 0x9a3a2a, 0xcfcfcf]);
         B(lx, fy + 0.75, 0.2, ww + 0.4, 0.05, 0.42, gc, { metal: true });
         B(lx, fy + 0.95 + wh, 0.2, ww + 0.4, 0.05, 0.42, gc, { metal: true });
         for (let bx = -ww / 2 - 0.15; bx <= ww / 2 + 0.16; bx += 0.14) B(lx + bx, fy + 0.8, 0.41, 0.02, wh + 0.15, 0.02, gc, { metal: true });
         if (R() < 0.4) { for (let t = 0; t < 3; t++) { const [px, pz] = W(lx - ww / 2 + 0.3 + t * 0.5, 0.3); k.sphere(px, y0 + fy + 0.95, pz, 0.18, C.leaf); } }
       }
-      if (R() < 0.45) {
+      if (neon&&R() < 0.45) {
         const ax = lx + (R() < 0.5 ? -1 : 1) * (ww / 2 - 0.2);
         B(ax, fy + 0.15, 0.3, 0.8, 0.5, 0.35, 0xe6e4dc);
         const [fx2, fz2] = W(ax + 0.12, 0.49); k.cyl(fx2, y0 + fy + 0.4 - 0.18, fz2, 0.17, 0.17, 0.02, 0x555555, 12, { rx: Math.PI / 2, ry });
@@ -191,22 +193,34 @@ function shophouse(k, cx, cz, ry, w, o = {}) {
     }
   }
   // roof: parapet, water tanks, rebar, rooftop shed
-  B(0, top, -0.08, w, 0.9, 0.16, face, { tile: true });
+  B(0, top, -0.08, w, 0.9, 0.16, face, { tile: neon });
   B(0, top, -depth + 0.08, w, 0.9, 0.16, C.concrete);
   for (const sd of [-1, 1]) B(sd * (w / 2 - 0.08), top, -depth / 2, 0.16, 0.9, depth, C.concrete);
-  if (R() < 0.8) {
+  if (neon&&R() < 0.8) {
     const [tx, tz] = W((R() - 0.5) * (w - 2), -depth * (0.3 + R() * 0.4));
     for (const [ox, oz] of [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]]) k.box(tx + ox, y0 + top, tz + oz, 0.08, 1.3, 0.08, C.greyD, 0, { metal: true });
     const tank = R() < 0.7;
     k.cyl(tx, y0 + top + 1.3, tz, 0.62, 0.62, 1.5, tank ? C.steel : C.blue, 14, { metal: tank });
     k.sphere(tx, y0 + top + 2.8, tz, 0.62, tank ? C.steel : C.blue, { sy: 0.3, metal: tank });
   }
-  if (R() < 0.5) for (const sd of [-1, 1]) for (let r = 0; r < 3; r++) { const [x, z] = W(sd * (w / 2 - 0.2 - r * 0.15), -0.3); k.beam(x, y0 + top + 0.9, z, x + (R() - 0.5) * 0.2, y0 + top + 2.2, z, 0.02, 0x6a3a22); }
-  if (R() < 0.35) {
+  if (neon&&R() < 0.5) for (const sd of [-1, 1]) for (let r = 0; r < 3; r++) { const [x, z] = W(sd * (w / 2 - 0.2 - r * 0.15), -0.3); k.beam(x, y0 + top + 0.9, z, x + (R() - 0.5) * 0.2, y0 + top + 2.2, z, 0.02, 0x6a3a22); }
+  if (neon&&R() < 0.35) {
     const sd = -depth * 0.55, sw = w - 0.4, sdp = depth * 0.5;
     B(0, top, sd, sw, 2.4, sdp, R() < 0.5 ? C.tin : 0x7fa0b8, { metal: true });
     const [rx, rz] = W(0, sd); k.tin(rx, y0 + top + 2.55, rz, sw + 0.4, sdp + 0.6, pick([C.tin, C.tinRust, 0x5a8ac0]), ry, 0.08);
   }
+  // Light geometry accents share the existing merged material batches.
+  if(europe){
+    B(0,top-.15,.18,w+.4,.35,.55,0xe9e0cf);
+    for(let i=0;i<10;i++){const a=i*Math.PI/10,b=(i+1)*Math.PI/10,r=(w-.8)/2;const [ax,az]=W(Math.cos(a)*r,-.15),[bx,bz]=W(Math.cos(b)*r,-.15);k.beam(ax,y0+2.35+Math.sin(a)*.9,az,bx,y0+2.35+Math.sin(b)*.9,bz,.10,0xe8deca);}
+    if((hn%3)===0){const [rx,rz]=W(0,-depth/2);k.roof(rx,y0+top+.8,rz,w,depth,1.3,0x5d6265,ry);}
+  }
+  if(campus){
+    B(0,top,-depth/2,w+.5,.22,depth+.2,0xd5dfdc);
+    for(let i=0;i<2;i++){const [px,pz]=W((i-.5)*(w-1),-1.7);k.box(px,y0+.02,pz,.7,.4,.7,0xb5c6bb,ry);k.sphere(px,y0+.65,pz,.42,0x6f9066);}
+    B(0,top+.24,-depth*.5,w*.75,.04,depth*.55,0x40665a);
+  }
+  if(neon){const accent=hn%2?0xcb578f:0x6bb1ac;for(const sd of [-1,1])B(sd*(w/2-.15),.4,.08,.05,2.2,.06,accent,{glow:true});}
   // walk points in the arcade
   const [ax, az] = W(0, -1.5);
   spawnSpots.push([ax, az]);
@@ -296,6 +310,7 @@ function buildPoles(scene) {
   };
   const poleAt = (x, z, lamp, lampDir) => {
     const y = heightAt(x, z);
+    if(regionAt(x,z).style!=='neon'){const campus=regionAt(x,z).style==='campus',col=campus?0x6b807c:0x635440;k.cyl(x,y,z,.08,.12,5.2,col,8,{metal:true,collide:true});k.box(x,y+5.1,z,.6,.12,.6,col);k.box(x,y+5.02,z,.5,.06,.5,0xffe8bf,0,{glow:true});lamps.push({x,y:y+5,z});poles.push([x,y+5,z,lampDir,false]);return;}
     k.cyl(x, y, z, 0.13, 0.18, 9.5, 0x8d8a82, 8, { collide: true });
     k.box(x, y + 8.6, z, 1.8, 0.1, 0.1, C.greyD, Math.atan2(lampDir[0], lampDir[1]) + Math.PI / 2);
     for (const o of [-0.7, 0, 0.7]) k.cyl(x + lampDir[1] * o, y + 8.7, z - lampDir[0] * o, 0.04, 0.04, 0.12, 0xdddddd, 6);
@@ -310,13 +325,13 @@ function buildPoles(scene) {
       k.box(lx, y + 6.95, lz, 0.4, 0.05, 0.24, 0xfff0c0, Math.atan2(lampDir[0], lampDir[1]), { glow: true });
       lamps.push({ x: lx, y: y + 6.9, z: lz });
     }
-    poles.push([x, y + 8.7, z, lampDir]);
+    poles.push([x, y + 8.7, z, lampDir,true]);
   };
   // main street: poles on both kerbs, alternating
   for (let x = -220; x <= 220; x += 30) { poleAt(x, -6.4, true, [0, 1]); poleAt(x + 15, 6.4, true, [0, -1]); }
   for (let i = 0; i < poles.length; i++) {
     const a = poles[i], b = poles[i + 2];
-    if (!b) continue;
+    if (!b||!a[4]||!b[4]) continue;
     for (const o of [-0.7, 0, 0.7]) addLine([a[0] + o * a[3][1] * 0, a[1] + 0.05, a[2] + o], [b[0], b[1] + 0.05, b[2] + o], 0.6);
     addLine([a[0], a[1] - 1.5, a[2]], [b[0], b[1] - 1.5, b[2]], 0.9);
     // drop wires into the buildings
@@ -335,7 +350,7 @@ function buildPoles(scene) {
         if (Math.abs(z) < 14 && Math.abs(x) < 232) continue;
         poleAt(x, z, r.kind !== 'field', [-nx, -nz]);
         const p = poles[poles.length - 1];
-        if (prev) { addLine([prev[0], prev[1], prev[2]], [p[0], p[1], p[2]], 0.7); addLine([prev[0], prev[1] - 1.5, prev[2]], [p[0], p[1] - 1.5, p[2]], 0.9); }
+        if (prev&&prev[4]&&p[4]) { addLine([prev[0], prev[1], prev[2]], [p[0], p[1], p[2]], 0.7); addLine([prev[0], prev[1] - 1.5, prev[2]], [p[0], p[1] - 1.5, p[2]], 0.9); }
         prev = p;
       }
     }
@@ -847,6 +862,8 @@ export function buildTown(scene) {
   for(const [id,name,kind] of [['home','阿嬤三合院','housing'],['station','車站','transport'],['school','國小','public'],['temple','媽祖廟','public'],['shrine','土地公廟','public'],['court','活動中心','public'],['recycle','回收場','recycling'],['betel','檳榔攤','retail'],['cloth','衣服攤','retail'],['hideout','舊倉庫','storage']]) economyPlaces.push({id,name,kind,...P[id]});
   for(const [i,a] of PADDIES.entries())economyPlaces.push({id:'field:'+i,name:'農田 '+(i+1),kind:'farm',x:(a.x0+a.x1)/2,z:(a.z0+a.z1)/2});
   economyPlaces.push({id:'garden',name:'高麗菜園',kind:'farm',x:(GARDEN.x0+GARDEN.x1)/2,z:(GARDEN.z0+GARDEN.z1)/2});
+  for(const d of economyPlaces){const r=regionAt(d.x,d.z);d.region=r.id;d.regionName=r.name;}
+  const regionalKit=new Kit();for(const r of CITY_REGIONS){const y=heightAt(r.x,-7);regionalKit.box(r.x,y,-7,.12,2.6,.12,0x697978,0);regionalKit.sign(r.x,y+1.8,-6.9,2.8,.7,drawSign(r.name,{bg:'#e5e0d2',fg:'#283c3a',sub:'全球发展最快的城市'}));}scene.add(regionalKit.build('region-gateways'));
   // sidewalk walk points on both kerbs and around the square / market
   for (let x = -220; x <= 220; x += 12) { spawnSpots.push([x, -8.5]); spawnSpots.push([x, 8.5]); }
   for (let z = -16; z > -110; z -= 10) spawnSpots.push([P.market.x, z]);

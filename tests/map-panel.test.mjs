@@ -1,7 +1,8 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';
 const url=s=>'data:text/javascript;base64,'+Buffer.from(s).toString('base64');
+const regions=url(await readFile(new URL('../src/city-regions.js',import.meta.url),'utf8'));
 const nav=url(await readFile(new URL('../src/map-navigation.js',import.meta.url),'utf8'));
-const {mountMap}=await import(url((await readFile(new URL('../src/map-panel.js',import.meta.url),'utf8')).replace("'./map-navigation.js'",JSON.stringify(nav))));
+const {mountMap}=await import(url((await readFile(new URL('../src/map-panel.js',import.meta.url),'utf8')).replace("'./city-regions.js'",JSON.stringify(regions)).replace("'./map-navigation.js'",JSON.stringify(nav))));
 test('tapping a map marker starts navigation immediately; dragging does not',()=>{
   const ctx=new Proxy({}, {get:()=>()=>{},set:()=>true});
   const canvas={getContext:()=>ctx,getBoundingClientRect:()=>({left:0,top:0,width:580,height:580}),setPointerCapture(){}};
