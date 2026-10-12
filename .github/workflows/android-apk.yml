@@ -53,14 +53,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v1.24-street-combat >/dev/null 2>&1; then exit 0; fi
+          if gh release view v1.25-simple-console >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
           手机 / 平板通用版 · Android 8.0+，固定签名，可覆盖安装稳定版。
-          小镇直接拔枪进入肩后第三人称射击：左键射击、右键瞄准、R换弹、Ctrl蹲伏、空格闪避、2/3收枪；手机复用触控战斗布局。
-          普通居民察觉枪械逃离，枪声提高警戒；原生安保调度接通持枪追捕和反击，收枪不清除追捕。
-          居民受伤取消到店消费并停工至当前轮次+3，停发工作工资，缺员影响真实店铺产出；康复重新按岗位和资金上岗。
-          弹药和伤情随存档保存。菜单购买24发备用弹药，支付NT$20进入五金店并消耗库存。
-          拔枪、开火、命中、逃跑、追捕、伤情、换弹与康复全部进入「日志」。沿用原作人物和授权枪械模型。
-          178项测试通过；浏览器验证实际命中、自动追捕、安保伤害、停工工资、付费弹药、存档恢复及据点切换，无脚本错误。实机触控与性能仍需验证。
+          控制台只保留四个页签：发币、买卖、持股、汇率。钱包和汇率常驻，删除统计卡、表格、曲线及其他控制入口。
+          NT$ / GOD 定向发币；用NT$买卖GOD；手动固定汇率直接作用于工资、消费和兑换。
+          两种货币均可购买店铺股份（1–100%），支付给原持有人，实际利润按持股份额自动分红；股份随存档保存。
+          「日志」保留独立入口，经济继续自动运行；原作人物和街头第三人称射击保留。
+          181项测试通过，验证双币持股、资金守恒、分红和存档；实机触控与布局仍需实际游玩验证。
           NOTES
-          gh release create v1.24-street-combat android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 1.24 · 小镇街头射击' --notes-file notes.md
+          gh release create v1.25-simple-console android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 1.25 · 精简控制台' --notes-file notes.md
