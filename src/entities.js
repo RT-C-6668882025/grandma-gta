@@ -255,6 +255,7 @@ export class Player extends Ent {
       const motion = stepLocomotion(this.heading, this.vel.x, this.vel.z, mv.x, mv.z, speed, dt);
       this.heading = motion.heading; this.vel.x = motion.vx; this.vel.z = motion.vz;
     }
+    if(ctl.combatMode&&Number.isFinite(ctl.combatHeading)&&a.moving!=='combatDodge')this.heading=ctl.combatHeading;
     if (!ctl.combatMode) this.stamina = clamp(this.stamina + (sprint ? -14 : 9 * (G.flags.smoking ? 1.6 : 1)) * dt, 0, 100);
     this.flightAxis = ctl.flyAxis || 0;
     const startX = this.pos.x, startZ = this.pos.z;

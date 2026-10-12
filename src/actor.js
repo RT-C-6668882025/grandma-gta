@@ -481,6 +481,15 @@ export class Actor {
     this.root.updateMatrixWorld(true);
     const R = this.rightAxis(), F = this.fwdAxis();
     const B = this.rig;
+    if(!this.down){
+      this.crouchBlend=this.busy?0:damp(this.crouchBlend||0,this.crouch?1:0,14,dt);
+      this.pivot.position.y=-this.t.minY*this.scale;this.root.updateMatrixWorld(true);
+      if(this.crouchBlend>.001){
+        const feet=[this.bonePos('lFoot'),this.bonePos('rFoot')];this.pivot.position.y-=this.crouchBlend*this.height*.24;this.root.updateMatrixWorld(true);
+        for(const [i,side] of ['l','r'].entries()){const hip=this.bonePos(side+'Thigh'),pole=hip.clone().addScaledVector(F,.5).addScaledVector(R,i?.08:-.08);this.ikChain(B[side+'Thigh'],B[side+'Calf'],B[side+'Foot'],feet[i],pole,1);this.levelFoot(B[side+'Foot'],F,1);}
+        this.turnBone(B.spine,R,-.12*this.crouchBlend);
+      }
+    }
     // flinch
     this.hitW = Math.max(0, this.hitW - dt * 4);
     if (this.hitW > 0 && !(this.cur && this.cur.name === 'hurt')) this.turnBone(B.spine, R, -0.45 * Math.sin(this.hitW * Math.PI));
@@ -562,7 +571,9 @@ export class Actor {
       this.pivot.rotation.x = -(f * f) * Math.PI / 2 * 0.97;
       this.pivot.position.y = -this.t.minY * this.scale + f * 0.13;
     }
+    if(this.shooting&&!this.busy&&!this.down)this.applyShootingPose();
     this.updateGear();
+    if(this.shooting&&!this.busy&&!this.down)this.alignGun();
   }
   // lean spine + chest forward about the rider's right axis until the shoulder line is within arm's reach of the grips
   leanToBars(R, w) {
@@ -599,6 +610,26 @@ export class Actor {
       if (e < be) { be = e; bt = t; }
     }
     this.turnBone(B.chest, up, bt * w);
+  }
+  applyShootingPose(){
+    const pose=this.shooting,forward=pose.direction.clone().normalize(),right=this.rightAxis(),h=this.height;
+    this.turnBone(this.rig.head,right,Math.asin(forward.y)*.5);
+    const recoil=pose.recoil||0,reload=pose.reload||0,drop=Math.sin(Math.PI*reload);
+    const chest=this.bonePos('chest'),r=chest.clone().addScaledVector(right,.13*h).addScaledVector(forward,(pose.aiming?.3:.24)*h-recoil*.06).addScaledVector(UP,(.02-drop*.16)*h);
+    const l=r.clone().addScaledVector(forward,.13*h).addScaledVector(right,-.1*h).addScaledVector(UP,-drop*.12*h);
+    for(const [side,target,sign] of [['r',r,1],['l',l,-1]]){
+      const shoulder=this.bonePos(side+'Arm'),pole=shoulder.clone().addScaledVector(right,sign*.3*h).addScaledVector(UP,-.4*h);
+      this.ik(side,target,pole,1);this.gripHand(side,side==='l'?1:-1,right,forward,1);
+    }
+    this.gunGrip=this.bonePos('rHand');this.gunDirection=forward;
+  }
+  alignGun(){
+    const gear=this.gear.weapon;if(!gear||!this.gunGrip)return;
+    const forward=this.gunDirection.clone().applyAxisAngle(this.rightAxis(),-.65*Math.sin(Math.PI*(this.shooting.reload||0))),side=new THREE.Vector3().crossVectors(UP,forward).normalize(),up=new THREE.Vector3().crossVectors(forward,side).normalize();
+    const q=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(side,up,forward));
+    const grip=this.gunGrip.clone().addScaledVector(forward,.08).addScaledVector(up,.055);
+    const world=new THREE.Matrix4().compose(grip,q,new THREE.Vector3(1,1,1));gear.obj.matrix.copy(this.root.matrixWorld).invert().multiply(world);
+    this.gunMuzzle=grip.clone().addScaledVector(forward,this.shooting.length||.42);
   }
   // palm down on the bar, fingers wrapped round it
   gripHand(side, sp, R, F, w) {

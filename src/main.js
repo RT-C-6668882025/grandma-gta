@@ -440,9 +440,11 @@ function step(d) {
   // ---------- simulate
   if(combatDemo.active) {
     combatDemo.update(d,{attackHeld:mouse.left||down('KeyJ'),attackPressed:mouse.clickL||hit('KeyJ'),aimHeld:mouse.right||down('KeyG'),scanPressed:hit('KeyQ'),crouchPressed:hit('ControlLeft','ControlRight'),interactPressed:hit('KeyE'),reloadPressed:hit('KeyR'),dodgePressed:hit('Space'),swapPressed:hit('Digit3'),weapon:hit('Digit1')?'gun':hit('Digit2')?'melee':null,heavyPressed:hit('KeyK'),sprint:ctl.sprint},playing,ctl.move);
+    if(combatDemo.state.aiming){ctl.sprint=false;ctl.move.x*=.65;ctl.move.z*=.65;}
     if(combatDemo.crouched){ctl.move.x*=.48;ctl.move.z*=.48;ctl.sprint=false;}
     if(combatDemo.state.mode==='dodging'||combatDemo.state.mode==='meleeWindup'||combatDemo.state.mode==='meleeRecovery')ctl.move={x:0,z:0};
   }
+  if(combatDemo.active)ctl.combatHeading=Math.atan2(-Math.sin(orbit.yaw),-Math.cos(orbit.yaw));
   player.update(d, ctl);
   for (const e of ents) {
     if (e === player) continue;
@@ -500,10 +502,11 @@ function step(d) {
   orbit.update(d, player.pos, (combatDemo.active&&combatDemo.crouched?.95:1.45) + (player.veh ? 0.6 : 0), {
     heading: player.veh ? player.veh.heading : player.heading,
     moving: playing && (player.veh ? Math.abs(player.veh.speed) > .5 : fw > 0 && rt === 0),
+    combat:combatDemo.active,aiming:combatDemo.state.aiming,
     vehicleDistance: player.veh ? (player.veh.def.car ? 6 : 4.5) : 0,
   });
   const firstPerson = orbit.mode === 'first' && !orbit.override;
-  player.actor.root.visible = !firstPerson;
+  player.actor.root.visible = !firstPerson && !(combatDemo.active&&camera.position.distanceTo(player.actor.headPos())<.5);
   if (player.veh && firstPerson) player.veh.root.visible = false;
   document.getElementById('cameraButton').textContent = CAMERA_LABELS[orbit.mode] + ' · C';
   ui.camYaw = orbit.yaw;
@@ -551,7 +554,7 @@ function tickWorld(d, focus) {
 
 function switchCamera() {
   if (mode !== 'play' || !orbit || inputLocked() || dance.on || ui.open) return;
-  orbit.cycleMode(); ui.toast(CAMERA_LABELS[orbit.mode]);
+  if(combatDemo.active){const pitch=orbit.pitch;orbit.setMode(orbit.mode==='third'?'first':'third');orbit.pitch=Math.max(-1.45,Math.min(1.45,pitch));}else orbit.cycleMode(); ui.toast(CAMERA_LABELS[orbit.mode]);
 }
 document.getElementById('cameraButton').onclick = switchCamera;
 function openPowers() {

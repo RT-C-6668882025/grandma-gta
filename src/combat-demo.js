@@ -1,3 +1,4 @@
+import {shotSolution} from './third-person-aim.js';
 import {makeWear} from './gear.js';
 import {regionAt} from './city-regions.js';
 import {loadCombatAssets,combatModel,createCombatEffects,createMechActor} from './combat-assets.js';
@@ -28,6 +29,7 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
   hud.innerHTML='<span class="combat-crosshair">＋</span><span class="combat-hitmark">×</span><div class="combat-readout"></div><div class="combat-objective"></div><div class="combat-target"></div><div class="combat-upgrades" hidden></div><div class="combat-damage"></div>';
   document.body.append(hud);
   let active=false,state=createCombatState(),inputState=createCombatInput(),mission=createEncounterMission(),targets=[],devices=[],covers=[],saved=null;
+  const worldFlash=flash.clone();scene.add(worldFlash);worldFlash.visible=false;
   const ground=(x,z)=>baseGround(x,z)+(active?.35:0);
   let flashTime=0,hitTime=0,hurtTime=0,noise=null,radio=null,trace=0,access=false,claimed=false,cameraSuspicion=0,elapsed=0;
   let cameraTriggered=false,emptyNotified=false;
@@ -36,7 +38,7 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
   const persist=p=>{fallbackProgress=p;setProgress?.(p);};
   const origin=new THREE.Vector3(),direction=new THREE.Vector3();
   const eye=()=>inputState.crouch?.95:1.45;
-  function aim(){const p=getPlayer(),o=getOrbit();origin.set(p.pos.x,p.pos.y+eye()*.94,p.pos.z);direction.set(-Math.sin(o.yaw)*Math.cos(o.pitch),-Math.sin(o.pitch),-Math.cos(o.yaw)*Math.cos(o.pitch));}
+  function aim(){const p=getPlayer(),o=getOrbit();o.update(0,p.pos,eye(),{combat:true,aiming:state.aiming});origin.copy(camera.position);camera.getWorldDirection(direction);}
   function obstruction(range){const end=origin.clone().addScaledVector(direction,range);return range*segmentBlock(origin.x,origin.y,origin.z,end.x,end.y,end.z);}
   const visible=(a,b)=>segmentBlock(a.x,a.y,a.z,b.x,b.y,b.z)===1;
   function selected(){aim();return rayTarget(origin,direction,[...targets,...devices],35,obstruction(35))?.target;}
@@ -53,8 +55,8 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
     if(!active)return;const p=getPlayer(),o=getOrbit();active=false;group.visible=false;view.visible=false;hud.hidden=true;document.body.classList.remove('combat-active');
     effects.clear();disposeStage();for(let i=blips.length-1;i>=0;i--)if(blips[i].combatMarker)blips.splice(i,1);
     p.queued=false;if(p.actor.cur){p.actor.cur.a.stop();p.actor.cur=null;}
-    p.pos.copy(saved.pos);p.heading=saved.heading;p.vel.set(0,0,0);p.hp=saved.hp;p.down=false;p.stamina=saved.stamina;p.walkMode=saved.walkMode;p.combatCrouch=false;p.combatFloorOffset=0;p.actor.getUp();p.actor.wear('weapon',saved.weapon);handWeapon=handBat=null;handMode=null;p.actor.root.visible=true;
-    o.setMode(saved.mode);o.yaw=saved.yaw;o.pitch=saved.pitch;camera.fov=58;camera.updateProjectionMatrix();
+    p.pos.copy(saved.pos);p.heading=saved.heading;p.vel.set(0,0,0);p.hp=saved.hp;p.down=false;p.stamina=saved.stamina;p.walkMode=saved.walkMode;p.combatCrouch=false;p.combatFloorOffset=0;p.actor.getUp();p.actor.shooting=null;p.actor.crouch=0;p.actor.crouchBlend=0;p.actor.gunMuzzle=null;worldFlash.visible=false;p.actor.wear('weapon',saved.weapon);p.actor.wear('bag',saved.bag);handWeapon=handBat=null;handMode=null;p.actor.root.visible=true;
+    o.setMode(saved.mode);o.yaw=saved.yaw;o.pitch=saved.pitch;o.want=saved.cameraDistance;o.cur=saved.cameraCurrent;camera.fov=saved.fov;camera.updateProjectionMatrix();
     log('离开源核据点',{result:mission.phase,route:mission.route});saveProgress();toast('已返回原位置');
   }
   function objectBox(x,z,w,h,d,color,collides=true){const y=ground(x,z);const root=mesh(new THREE.BoxGeometry(w,h,d),color,group,x,y+h/2,z);if(collides)addBox(x,z,w/2,d/2,0,y+h,'combat-demo');return root;}
@@ -62,12 +64,12 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
     if(active){stop();return;}
     const p=getPlayer(),o=getOrbit();if(!p||p.veh||p.down||o.override||p.actor.busy){toast('请先结束当前动作并下车');return false;}
     const region=regionAt(p.pos.x,p.pos.z).id,kind=region==='dongbu'?'rifle':region==='chengwan'?'tech':'pistol';if(weaponSkin)gun.remove(weaponSkin);weaponSkin=combatModel(kind)||combatModel('pistol');if(weaponSkin){weaponSkin.position.set(.24,-.23,-.62);weaponSkin.rotation.y=kind==='tech'?Math.PI:-Math.PI/2;gun.add(weaponSkin);}weaponName=kind==='rifle'?'东埠试验枪':kind==='tech'?'澄湾能量枪':'榆庭制式枪';
-    saved={weapon:p.actor.gear.weapon?.obj||null,pos:p.pos.clone(),heading:p.heading,hp:p.hp,stamina:p.stamina,walkMode:p.walkMode,mode:o.mode,yaw:o.yaw,pitch:o.pitch};p.walkMode=false;handWeapon=combatModel(kind)||combatModel('pistol');if(handWeapon)handWeapon.rotation.y=kind==='tech'?0:Math.PI/2;handBat=makeWear('bat',p.actor.t.attach.weapon);handMode=null;
+    saved={cameraDistance:o.want,cameraCurrent:o.cur,fov:camera.fov,bag:p.actor.gear.bag?.obj||null,weapon:p.actor.gear.weapon?.obj||null,pos:p.pos.clone(),heading:p.heading,hp:p.hp,stamina:p.stamina,walkMode:p.walkMode,mode:o.mode,yaw:o.yaw,pitch:o.pitch};p.walkMode=false;p.actor.wear('bag',null);handWeapon=combatModel(kind)||combatModel('pistol');if(handWeapon)handWeapon.children[0].rotation.y=kind==='tech'?0:Math.PI/2;handBat=makeWear('bat',p.actor.t.attach.weapon);handMode=null;
     state=createCombatState();inputState=createCombatInput();mission=createEncounterMission();flashTime=hitTime=hurtTime=elapsed=trace=cameraSuspicion=0;noise=radio=null;access=claimed=cameraTriggered=emptyNotified=false;
     if(!assetReady){assetLoad.then(()=>toast('战斗资源已就绪，请再次进入'));toast('正在载入战斗资源');return false;}
     if(!hasKind('thug2')){toast('守卫模型尚未就绪，请稍后再试');return false;}
     active=true;p.hp=p.maxHp;p.combatFloorOffset=.35;p.queued=false;group.visible=true;hud.hidden=false;document.body.classList.add('combat-active');
-    p.pos.set(EXIT.x,ground(EXIT.x,EXIT.z),EXIT.z);p.vel.set(0,0,0);o.setMode('first');o.yaw=0;o.pitch=0;
+    p.pos.set(EXIT.x,ground(EXIT.x,EXIT.z),EXIT.z);p.vel.set(0,0,0);o.setMode('third');o.yaw=0;o.pitch=.06;p.heading=Math.PI;p.actor.heading=p.heading;
     const floorGeometry=new THREE.PlaneGeometry(32,44,16,22);floorGeometry.rotateX(-Math.PI/2);
     const floorPositions=floorGeometry.attributes.position;
     for(let i=0;i<floorPositions.count;i++)floorPositions.setY(i,ground(floorPositions.getX(i),floorPositions.getZ(i)+182)+.04);
@@ -82,7 +84,7 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
     for(const x of [-12,12]){objectBox(x,166,2,.7,3,0xc3b79e);mesh(new THREE.SphereGeometry(.85,8,6),0x527459,group,x,ground(x,166)+1.4,166);}
     const locations=[[-8,185,'cover'],[8,177,'flank'],[0,169,'cover']];
     for(const [i,[x,z,role]] of locations.entries()){
-      const y=ground(x,z),actor=(i===2?createMechActor():null)||new Actor('thug2'),root=actor.root;const rifle=combatModel('rifle');if(rifle&&actor.wear){rifle.rotation.y=Math.PI/2;actor.wear('weapon',rifle);}root.position.set(x,y,z);group.add(root);
+      const y=ground(x,z),actor=(i===2?createMechActor():null)||new Actor('thug2'),root=actor.root;const rifle=combatModel('rifle');if(rifle&&actor.wear){rifle.children[0].rotation.y=Math.PI/2;actor.wear('weapon',rifle);}root.position.set(x,y,z);group.add(root);
       const beam=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]),new THREE.LineBasicMaterial({color:0xff795b}));beam.visible=false;group.add(beam);
       targets.push({id:'guard:'+i,x,y:y+1.1,z,radius:.75,hp:85,root,actor,beam,beamTime:0,flash:0,disabled:0,brain:createGuardBrain('guard:'+i,role),heading:0,home:{x,z},path:[],pathTimer:0,hit:false});
     }
@@ -122,7 +124,7 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
       }
       if(e.type==='windup'){/* Timing feedback stays in the HUD and attack beam. */}
       if(e.type==='fire'){t.actor.fire?.();
-        const a=new THREE.Vector3(t.x,t.y+.1,t.z),b=new THREE.Vector3(e.at.x,ground(e.at.x,e.at.z)+.9,e.at.z);
+        const a=t.actor.gunMuzzle?.clone()||new THREE.Vector3(t.x,t.y+.1,t.z),b=new THREE.Vector3(e.at.x,ground(e.at.x,e.at.z)+.9,e.at.z);
         const dir=b.clone().sub(a).normalize(),range=a.distanceTo(b)+2;
         t.beam.geometry.setFromPoints([a,b]);t.beamTime=.12;t.beam.visible=true;sound('bonk');
         const end=a.clone().addScaledVector(dir,range),block=range*segmentBlock(a.x,a.y,a.z,end.x,end.y,end.z);
@@ -152,7 +154,7 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
     }
 
     if(t.brain.lastKnown&&t.brain.mode!=='patrol')t.heading=Math.atan2(t.brain.lastKnown.x-t.x,t.brain.lastKnown.z-t.z);
-    t.actor.heading=t.heading;t.actor.update(dt);
+    t.actor.heading=t.heading;t.actor.shooting=t.brain.mode==='combat'&&!t.disabled?{direction:new THREE.Vector3(p.pos.x-t.x,p.pos.y+1.1-t.y,p.pos.z-t.z).normalize(),aiming:true,length:.4}:null;t.actor.update(dt);
   }
   function update(dt,raw,playing,move){
     if(!active)return;const p=getPlayer(),o=getOrbit();
@@ -163,37 +165,42 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
     const converted=combatIntents(inputState,raw,state.weapon,dt);inputState=converted.state;
     let input=converted.intents;
     if(raw.swapPressed)input.weapon=state.weapon==='gun'?'melee':'gun';
-    p.combatCrouch=inputState.crouch;
+    p.combatCrouch=inputState.crouch;p.actor.crouch=inputState.crouch;
     p.pos.x=Math.max(BOUNDS.minX,Math.min(BOUNDS.maxX,p.pos.x));p.pos.z=Math.max(BOUNDS.minZ,Math.min(BOUNDS.maxZ,p.pos.z));p.pos.y=ground(p.pos.x,p.pos.z);
-    const picked=selected();
+    if(state.mode!=='dodging'&&p.actor.moving!=='combatDodge')p.heading=Math.atan2(-Math.sin(o.yaw),-Math.cos(o.yaw));p.actor.heading=p.heading;
+    if(handMode!==state.weapon){p.actor.wear('weapon',state.weapon==='gun'?handWeapon:handBat);handMode=state.weapon;}
+    p.actor.shooting=state.weapon==='gun'&&!state.scanning&&!['dodging','hacking'].includes(state.mode)?{direction:new THREE.Vector3(-Math.sin(o.yaw)*Math.cos(o.pitch),-Math.sin(o.pitch),-Math.cos(o.yaw)*Math.cos(o.pitch)),aiming:!!raw.aimHeld,reload:state.mode==='reloading'?1-state.action.remaining/COMBAT_RULES.reloadTime:0,recoil:flashTime/.055,length:.3}:null;
+    p.actor.root.position.copy(p.pos);p.actor.update(0);
+    const picked=selected(),bodyEye={x:p.pos.x,y:p.pos.y+eye()*.8,z:p.pos.z};
+    const currentShot=shotSolution(origin,direction,p.actor.gunMuzzle||bodyEye,[...targets,...devices],rayTarget,(a,b)=>segmentBlock(a.x,a.y,a.z,b.x,b.y,b.z));
     // Context interactions have range and orientation checks; never use the old civilian target picker.
     if(raw.interactPressed&&!inputState.scan&&state.mode==='ready'){
       const terminal=devices.find(d=>d.id==='terminal');
-      if(mission.phase==='infiltrate'&&Math.hypot(p.pos.x-terminal.x,p.pos.z-terminal.z)<2.5&&visible(origin,terminal)){
+      if(mission.phase==='infiltrate'&&Math.hypot(p.pos.x-terminal.x,p.pos.z-terminal.z)<2.5&&visible(bodyEye,terminal)){
         missionAction('retrieve',{authorized:true});log('取回源核芯片：实体终端访问');toast('芯片已取得 · 返回入口撤离');
       }else{
         const victim=targets.find(t=>t.hp>0&&Math.hypot(t.x-p.pos.x,t.z-p.pos.z)<2.2&&t.brain.mode!=='combat'&&
-          (Math.sin(t.heading)*(p.pos.x-t.x)+Math.cos(t.heading)*(p.pos.z-t.z))<-.5&&visible(origin,t));
+          (Math.sin(t.heading)*(p.pos.x-t.x)+Math.cos(t.heading)*(p.pos.z-t.z))<-.5&&visible(bodyEye,t));
         if(victim&&inputState.crouch){hit(victim,100,true);missionAction('takedown');log('从背后制服守卫',{target:victim.id});}
       }
     }
     const hackValid=!!picked&&Math.hypot(picked.x-p.pos.x,picked.z-p.pos.z)<18&&
       (picked.id!=='terminal'||mission.phase==='infiltrate'&&(access||targets.every(t=>!t.hp)));
-    const result=stepCombat(state,input,{sprinting:!!raw.sprint&&!inputState.crouch&&Math.hypot(move.x,move.z)>.2,perks:progress().perks,hackTarget:{id:picked?.id,valid:hackValid&&(inputState.scan||state.mode!=='hacking')}},dt);
+    const result=stepCombat(state,input,{sprinting:!!raw.sprint&&!raw.aimHeld&&!inputState.crouch&&Math.hypot(move.x,move.z)>.2,perks:progress().perks,hackTarget:{id:picked?.id,valid:hackValid&&(inputState.scan||state.mode!=='hacking')}},dt);
     state=result.state;p.stamina=state.stamina;
     for(const e of result.events){
       if(e.type==='shot'){
         p.heading=Math.atan2(-Math.sin(o.yaw),-Math.cos(o.yaw));p.actor.heading=p.heading;log('开火 · '+weaponName+' · 剩余弹药 '+state.ammo,{ammo:state.ammo});flashTime=.055;o.pitch=Math.max(-1.5,o.pitch-.016);sound('bonk');noiseAt(32,true);missionAction('shot');
-        if(picked?.brain){
-          const impact=rayTarget(origin,direction,[picked],35,obstruction(35));
-          const headshot=impact&&origin.y+direction.y*impact.distance>picked.y+.4;
-          hit(picked,Math.round((progress().perks.includes('marksman')?30:24)*(headshot?1.6:1)));
-        }
+        const muzzle=p.actor.gunMuzzle||new THREE.Vector3(p.pos.x,p.pos.y+eye()*.8,p.pos.z);
+        const solution=currentShot;
+        const target=solution.hit?.target;
+        if(target?.brain){const headshot=muzzle.y+solution.direction.y*solution.hit.distance>target.y+.4;hit(target,Math.round((progress().perks.includes('marksman')?30:24)*(headshot?1.6:1)));}
+        else if(solution.blocked)effects.emit(new THREE.Vector3(solution.impact.x,solution.impact.y,solution.impact.z),.18);
       }else if(e.type==='empty'){if(!emptyNotified){toast('弹匣已空 · 按 R 或点击换弹');emptyNotified=true;}}else if(e.type==='reloadStarted'){log('开始换弹');
       }else if(e.type==='meleeStarted'){log(e.heavy?'发动重击':'发动近战攻击');
         p.heading=Math.atan2(-Math.sin(o.yaw),-Math.cos(o.yaw));p.actor.play(p.actor.has(e.heavy?'combatHeavy':'combatLight')?(e.heavy?'combatHeavy':'combatLight'):(e.heavy?'kick':'jab'),{dur:e.heavy?1:.5});sound('whoosh');
       }else if(e.type==='meleeContact'){
-        aim();const victim=targets.filter(t=>t.hp>0&&Math.hypot(t.x-p.pos.x,t.z-p.pos.z)<2.4&&visible(origin,t)&&
+        aim();const victim=targets.filter(t=>t.hp>0&&Math.hypot(t.x-p.pos.x,t.z-p.pos.z)<2.4&&visible(bodyEye,t)&&
           (direction.x*(t.x-p.pos.x)+direction.z*(t.z-p.pos.z))>.3).sort((a,b)=>Math.hypot(a.x-p.pos.x,a.z-p.pos.z)-Math.hypot(b.x-p.pos.x,b.z-p.pos.z))[0];
         if(victim){hit(victim,e.heavy?45:24);noiseAt(9,false);}
       }else if(e.type==='dodge'){log('闪避：打断当前动作');
@@ -223,8 +230,8 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
     if(noise){noise.left-=dt;if(noise.left<=0)noise=null;}if(radio){radio.left-=dt;if(radio.left<=0)radio=null;}
     mission=stepEncounterMission(mission,Math.hypot(p.pos.x-EXIT.x,p.pos.z-EXIT.z)<2.5?'extract':null,{atExit:true,dead:p.down},dt);
     if(mission.phase==='complete'&&phaseBefore!=='complete')complete();
-    flashTime=Math.max(0,flashTime-dt);hitTime=Math.max(0,hitTime-dt);hurtTime=Math.max(0,hurtTime-dt);flash.visible=flashTime>0;
-    effects.update(dt);if(handMode!==state.weapon){p.actor.wear('weapon',state.weapon==='gun'?handWeapon:handBat);handMode=state.weapon;}
+    flashTime=Math.max(0,flashTime-dt);hitTime=Math.max(0,hitTime-dt);hurtTime=Math.max(0,hurtTime-dt);flash.visible=flashTime>0;worldFlash.visible=flashTime>0&&o.mode!=='first';if(worldFlash.visible)worldFlash.position.copy(p.actor.gunMuzzle||p.pos);
+    effects.update(dt);
     if(state.mode==='blocking'&&p.actor.has('combatBlock')&&p.actor.moving!=='combatBlock')p.actor.play('combatBlock');
     else if(state.mode!=='blocking'&&p.actor.moving==='combatBlock')p.actor.stopMove();
     view.visible=o.mode==='first'&&!o.override;gun.visible=state.weapon==='gun';blade.visible=!gun.visible;
@@ -233,12 +240,13 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
     gun.rotation.z=-.45*reloadArc;gun.position.y=(state.aiming?.12:0)-.16*reloadArc;
     blade.rotation.z=state.mode==='meleeWindup'?-.7:state.mode==='meleeRecovery'?.5:state.mode==='blocking'?-.9:0;
     view.position.y=Math.sin(elapsed*8)*Math.hypot(move.x,move.z)*.007;
-    const fov=state.aiming?44:58;if(camera.fov!==fov){camera.fov=fov;camera.updateProjectionMatrix();}
+    const fov=state.aiming?(o.mode==='third'?50:44):(o.mode==='third'?62:58);camera.fov=THREE.MathUtils.damp(camera.fov,fov,16,dt);camera.updateProjectionMatrix();
     hud.hidden=false;hud.querySelector('.combat-hitmark').style.opacity=hitTime?'1':'0';hud.querySelector('.combat-damage').style.opacity=hurtTime?'1':'0';
     hud.querySelector('.combat-readout').textContent=`${state.weapon==='gun'?weaponName:'近战'} · 弹药 ${state.ammo}/${state.reserve} · 体力 ${Math.floor(state.stamina)} · 算力 ${state.ram.toFixed(1)}${inputState.crouch?' · 潜行':''}${state.mode==='reloading'?' · 换弹中':''}`;
     const highest=Math.max(cameraSuspicion,...targets.map(t=>t.hp?t.brain.suspicion:0));
     hud.querySelector('.combat-objective').textContent=mission.phase==='complete'?`完成 · ${mission.route} · 点“撤离据点”返回`:mission.phase==='extract'?'芯片已取得 · 返回入口绿色圆环撤离':`目标：取回后方终端的源核芯片 · 警戒 ${Math.round(highest*100)}%`;
     hud.querySelector('.combat-target').textContent=inputState.scan?`扫描：${picked?picked.id==='relay'?'中继器 · E 接管':picked.id==='camera'?'监控 · E 停用':picked.id==='terminal'?access?'芯片终端 · E 远程提取':'终端加密 · 先接管中继器':'安保 · E 武器故障':'无目标'}${picked&&Math.hypot(picked.x-p.pos.x,picked.z-p.pos.z)>18?' · 超出破解距离':state.nextHack>state.clock?' · 冷却 '+(state.nextHack-state.clock).toFixed(1)+' 秒':state.ram<(progress().perks.includes('efficientHack')?2:3)?' · 算力不足':''} · 追踪 ${Math.round(trace*100)}%`:picked?.brain?`${picked.brain.mode==='combat'?'交战':picked.brain.mode==='search'?'搜索':picked.brain.mode==='suspicious'?'怀疑':'巡逻'} · 安保 ${picked.hp} HP`:'Ctrl 潜行 · Q 扫描 · E 操作/背后处置 · 3 切换武器';
+    const obstructed=state.weapon==='gun'&&!inputState.scan&&currentShot.blocked;hud.querySelector('.combat-crosshair').style.color=obstructed?'#ffac80':'';if(obstructed)hud.querySelector('.combat-target').textContent+=' · 枪口被遮挡';
   }
   return {start,stop,update,get assetsReady(){return assetReady;},get active(){return active;},get state(){return state;},get targets(){return targets;},get device(){return devices.find(d=>d.id==='relay');},get devices(){return devices;},get mission(){return mission;},get crouched(){return inputState.crouch;},get scanning(){return inputState.scan;}};
 }

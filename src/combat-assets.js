@@ -8,7 +8,7 @@ export async function loadCombatAssets(){
  const modelWork=Promise.allSettled(Object.entries(COMBAT_MODELS).map(async([id,def])=>{const gltf=await loadModel(loader,def.path);const model=gltf.scene;model.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());const holder=new THREE.Group();holder.add(model);model.position.sub(center);holder.scale.setScalar(def.length/Math.max(size.x,size.y,size.z));holder.name='authored:'+id;templates.set(id,holder);}));
  await Promise.all([modelWork,loadModel(loader,'assets/combat/mech-george.glb').then(g=>templates.set('mech',g)).catch(e=>console.warn('Mech asset unavailable',e))]);
 }
-export function combatModel(id){const original=templates.get(id);return original?original.clone(true):null;}
+export function combatModel(id){const original=templates.get(id);if(!original)return null;const root=new THREE.Group();root.add(original.clone(true));return root;}
 // A small sprite pool: no full-screen bloom, physics bodies, or per-frame allocation.
 export function createCombatEffects(scene){
  const textures=['fire-explosion','smoke'].map(id=>{const texture=new THREE.TextureLoader().load('assets/combat/spell-'+id+'-atlas.png');texture.colorSpace=THREE.SRGBColorSpace;return texture;});

@@ -47,7 +47,7 @@ export class OrbitCam {
       return;
     }
     this.lookIdle += dt;
-    if (this.mode === 'third' && !this.manualLook && this.lookIdle > 1.5 && follow.moving && Number.isFinite(follow.heading)) this.yaw = dampAngle(this.yaw, follow.heading + Math.PI, 2, dt);
+    if (this.mode === 'third' && !follow.combat && !this.manualLook && this.lookIdle > 1.5 && follow.moving && Number.isFinite(follow.heading)) this.yaw = dampAngle(this.yaw, follow.heading + Math.PI, 2, dt);
     this.target.set(focus.x, damp(this.target.y || focus.y + height * 0.86, focus.y + height * 0.86, 12, dt), focus.z);
     const t = this.target;
     const cp = Math.cos(this.pitch);
@@ -62,6 +62,20 @@ export class OrbitCam {
       this.cam.position.copy(t.clone().addScaledVector(dir, this.want));
       this.cam.position.y = Math.max(this.cam.position.y, heightAt(this.cam.position.x, this.cam.position.z) + 3);
       this.cam.lookAt(t); return;
+    }
+    if(follow.combat&&this.mode==='third'){
+      // Shoulder and reticle share the same forward axis; neither points at the avatar.
+      const side=new THREE.Vector3(Math.cos(this.yaw),0,-Math.sin(this.yaw));
+      const anchor=t.clone().addScaledVector(side,(follow.aiming?.42:.58));
+      const distance=follow.aiming?1.65:2.8;
+      const offsetClear=segmentBlock(t.x,t.y,t.z,anchor.x,anchor.y,anchor.z);
+      if(offsetClear<1)anchor.copy(t).addScaledVector(side,Math.max(0,(follow.aiming?.42:.58)*offsetClear-.12));
+      const far=anchor.clone().addScaledVector(dir,distance);
+      const fraction=segmentBlock(anchor.x,anchor.y,anchor.z,far.x,far.y,far.z);
+      const desired=Math.max(.08,distance*fraction-.18);this.cur=desired<this.cur?desired:damp(this.cur,desired,12,dt);
+      this.cam.position.copy(anchor).addScaledVector(dir,this.cur);
+      this.cam.position.y=Math.max(this.cam.position.y,heightAt(this.cam.position.x,this.cam.position.z)+.3);
+      this.cam.lookAt(this.cam.position.clone().addScaledVector(dir,-20));return;
     }
     const distance = Math.max(this.want, follow.vehicleDistance || 0);
     // pull in when a wall is between the player and the camera

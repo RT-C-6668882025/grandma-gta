@@ -53,14 +53,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v1.22-combat-assets >/dev/null 2>&1; then exit 0; fi
+          if gh release view v1.23-third-person >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
           手机 / 平板通用版 · Android 8.0+，固定签名，可覆盖安装稳定版。
-          接入 Quaternius 手枪、AK 和原生动画机甲，保留原作阿嬤与人类守卫。Kenney 科幻武器按出发街区显示，当前共用射击数值。
-          五个 CC0 动作重定向到原作骨骼：近战、重击、翻滚、防御和破解施术。保留原走跑/剧情动画，近战姿势与伤害帧对齐。
-          第一/第三人称武器、瞄准、换弹、近战、命中火花和烟雾接通；退出恢复原装备，不释放共享模型。
-          日志补充开火、伤害、近战、闪避和换弹；扫描显示破解冷却和距离限制。
-          171 项测试通过，浏览器验证强攻、潜入、破解三条完成路线，机甲与装备恢复，无脚本错误。
-          资源及 CC0/MIT 许可证包含在离线 APK。未导入全部动作；第一人称手臂与专属持枪/换弹人物动作待适配。实机性能仍需验证。
+          默认右肩后第三人称射击；瞄准收镜、视野平滑变化，角色朝向准星，瞄准时减速并停止冲刺。
+          原作双臂 IK 接通持枪、支撑手、后坐和换弹，腿部 IK 接通蹲伏；战斗中收起手提袋，退出恢复原装备与镜头参数。
+          准星镜头选目标、真实枪口判命中，防止看见目标却隔墙开枪；枪口受阻有提示。
+          肩部偏移和镜头后方均检查碰撞，贴墙收镜，靠近身体时防止角色穿镜。第三人称显示场景枪口闪光和命中特效。
+          C 在战斗中切换第三/第一人称。已有正式武器、机甲和三条据点路线保留。
+          176 项测试通过；浏览器检查瞄准、蹲伏、换弹、三条路线及装备恢复，无脚本错误。实机触控与性能仍需验证。
           NOTES
-          gh release create v1.22-combat-assets android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 1.22 · 战斗资源接入' --notes-file notes.md
+          gh release create v1.23-third-person android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 1.23 · 第三人称射击' --notes-file notes.md
