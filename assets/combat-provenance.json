@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "path": "assets/combat/spell-smoke-atlas.png",
+      "source": "https://github.com/holokat/game-assets/blob/main/site/studio/public/vfx/spell-smoke-atlas.png",
+      "sha256": "d2a4f4c0665a156788047f1c1a887fabc840fd0162a666ed4bf4c11507f7411d",
+      "bytes": 700628,
+      "license": "MIT",
+      "conversion": "original bytes"
+    },
+    {
+      "path": "assets/combat/spell-vfx-atlases.json",
+      "source": "https://github.com/holokat/game-assets/blob/main/site/studio/public/vfx/spell-vfx-atlases.json",
+      "sha256": "e10f6dc801c95884884c1ef3dc91c7fa0a0aa0a60b0beaf0a042b7528d6a3de8",
+      "bytes": 977,
+      "license": "MIT",
+      "conversion": "original bytes"
+    },
+    {
+      "path": "assets/combat/spell-fire-explosion-atlas.png",
+      "source": "https://github.com/holokat/game-assets/blob/main/site/studio/public/vfx/spell-fire-explosion-atlas.png",
+      "sha256": "d7ded22de31810956a14847a307abd9bdc32841dc595d696cf87f7ddfec6dca9",
+      "bytes": 644289,
+      "license": "MIT",
+      "conversion": "original bytes"
+    },
+    {
+      "path": "assets/combat/weapon_rifle.glb",
+      "source": "https://github.com/shorepine/kenney/blob/main/3d/space/weapon_rifle.glb",
+      "sha256": "266ffd12306a2afc2638e9a479687adf738fc3cd9e938ce8e3195ccb312a6b31",
+      "bytes": 8740,
+      "license": "CC0-1.0",
+      "conversion": "original bytes"
+    },
+    {
+      "path": "assets/combat/toon-ak.glb",
+      "source": "https://drive.google.com/file/d/1l0xKfDH9bXfoY_I0V5K-ebyvGKOZlyLX/view",
+      "sha256": "4f3d35ff1fbc26864a6ff129a4969f5e3d34b3d7e4c5d0a58dc7044b3c9bcd30",
+      "bytes": 58428,
+      "license": "CC0-1.0",
+      "conversion": "embedded glTF repacked as GLB without geometry changes"
+    },
+    {
+      "path": "assets/combat/mech-george.glb",
+      "source": "https://drive.google.com/file/d/1CEATvzzC1w198kD9DLTamgMD8LsRwV1I/view",
+      "sha256": "9640a6453b970c76b2b2661ffb061a2ae6762e5a74ada61808bffe84d637d50f",
+      "bytes": 1178104,
+      "license": "CC0-1.0",
+      "conversion": "embedded glTF repacked as GLB without geometry changes"
+    },
+    {
+      "path": "assets/combat/toon-pistol.glb",
+      "source": "https://drive.google.com/file/d/1_Tfluq4koxo_p23d3aC-r2_jmUjY0Fsd/view",
+      "sha256": "74411e8662194713bd87e9ca8bbaf0e69b7dc19954f4f443711ba9a6acbd27f6",
+      "bytes": 42504,
+      "license": "CC0-1.0",
+      "conversion": "embedded glTF repacked as GLB without geometry changes"
+    },
+    {
+      "path": "assets/animations/sourcecore.json",
+      "source": "https://github.com/holokat/game-assets/blob/main/site/studio/public/animations/quaternius-retargeted.json",
+      "sha256": "4bae2f2f08ab0d7277ac5c31b44426880f21733d09c72ff46efb4fb1e9b19b96",
+      "bytes": 280338,
+      "license": "CC0-1.0 (animation clips); MIT (source rig metadata)",
+      "conversion": "selected clips at 30fps plus source rig metadata",
+      "sourceRig": "https://github.com/holokat/game-assets/blob/main/site/studio/public/models/warrior-base-rigged.glb"
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import {loadCombatMotionBank,retargetCombatClips,alignStrikeTiming} from './authored-combat-motion.js';
 import { gaitRate } from './player-locomotion.js';
 import { loadModel } from './model-loader.js';
 // Rigged characters. Two skeletons are in play:
@@ -41,6 +42,11 @@ const RIG = {
 };
 // one-shot moves: clip name per rig (first that exists wins); dur = on-screen seconds
 export const MOVES = {
+  combatLight: { clips: ['Sword_Attack'], dur: .5, full: true, strike: true },
+  combatHeavy: { clips: ['Sword_Heavy_Combo'], dur: 1, full: true, strike: true },
+  combatDodge: { clips: ['Roll'], dur: .3, full: true },
+  combatHack: { clips: ['Spell_Simple_Shoot'], dur: .6, full: true },
+  combatBlock: { clips: ['Sword_Block'], dur: 1, full: true, loop: true },
   jab:    { clips: ['box_01', 'slash'], dur: 0.5, strike: true },
   cross:  { clips: ['box_02', 'slash'], dur: 0.55, strike: true },
   kick:   { clips: ['front_kick_01', 'slash'], dur: 0.7, strike: true },
@@ -150,7 +156,9 @@ async function loadKind(kind) {
   if (clips.idle && clips.idle.userData.drift > 0.2) delete clips.idle;
   const t = { kind, def, rig, scene, bones, hRaw, yaw, fwd, clips, skinned, minY: box.min.y, hipScale, upAxis };
   if (def.hat) markHat(t);
+  try { Object.assign(clips,retargetCombatClips(await loadCombatMotionBank(),t)); } catch(error) { console.warn('Authored combat motion unavailable; native moves retained',kind,error); }
   analyseMoves(t);
+  for(const [move,phase] of [['combatLight',.36],['combatHeavy',.4]])if(t.moves[move])t.moves[move]=alignStrikeTiming(t.moves[move],phase);
   t.attach = computeAttach(t, def.height);
   T[kind] = t;
   return t;

@@ -53,14 +53,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v1.21-cooperation >/dev/null 2>&1; then exit 0; fi
+          if gh release view v1.22-combat-assets >/dev/null 2>&1; then exit 0; fi
           cat > notes.md <<'NOTES'
           手机 / 平板通用版 · Android 8.0+，固定签名，可覆盖安装稳定版。
-          店铺面板接入源核授权：投入 NT$100，三个实际完成生产或服务的轮次后落地。
-          落地后每名员工工资增加 NT$2，生产岗位每人产出增加 2；正经营利润的 10% 在保留运营资金后支付给阿嬤。
-          缺人、停业、关闭生产会暂停合作；进度、落地、授权收入与终止记录进入「日志」。
-          合作随固定店铺保存，控股人变化不重置；可随时终止，不虚构退款或发行奖励。
-          复用原作者美术资源，移除临时库存方块，没有新增人物或武器占位模型。
-          168 项自动测试通过；浏览器验证授权、实时进度、日志、存档恢复和终止入口。实机手感及经济平衡仍需游玩验证。
+          接入 Quaternius 手枪、AK 和原生动画机甲，保留原作阿嬤与人类守卫。Kenney 科幻武器按出发街区显示，当前共用射击数值。
+          五个 CC0 动作重定向到原作骨骼：近战、重击、翻滚、防御和破解施术。保留原走跑/剧情动画，近战姿势与伤害帧对齐。
+          第一/第三人称武器、瞄准、换弹、近战、命中火花和烟雾接通；退出恢复原装备，不释放共享模型。
+          日志补充开火、伤害、近战、闪避和换弹；扫描显示破解冷却和距离限制。
+          171 项测试通过，浏览器验证强攻、潜入、破解三条完成路线，机甲与装备恢复，无脚本错误。
+          资源及 CC0/MIT 许可证包含在离线 APK。未导入全部动作；第一人称手臂与专属持枪/换弹人物动作待适配。实机性能仍需验证。
           NOTES
-          gh release create v1.21-cooperation android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 1.21 · 源核合作' --notes-file notes.md
+          gh release create v1.22-combat-assets android/build/grandma-gta-phone-tablet.apk --target "$GITHUB_SHA" --title '阿嬤俠盜 · 1.22 · 战斗资源接入' --notes-file notes.md

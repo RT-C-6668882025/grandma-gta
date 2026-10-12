@@ -19,3 +19,11 @@ Actor 克隆的几何和贴图来自共享模板。销毁遭遇时先停止动�
 ## 当前交付
 
 守卫复用 `thug2.glb` 与 Actor；新区复用原建筑生成器；中心使用已有办公桌、货架、收音机、小吃车、凳子和石凳。撤下临时枪械、手臂、刀、机器人、喷泉及展示环。正式枪械、喷泉与专属科技设备资源延期。
+
+## 1.22：经授权的外部资源
+
+用户指定的现成资源包可沿用现有 GLB 加载与骨骼挂点接入，无需重新生成。Toon Shooter 的 Pistol、AK 和 Animated Mech 的 George 使用 Quaternius CC0 原模型；Kenney 的科幻 rifle 使用 CC0 原模型。导入时仅把内嵌 glTF 转为 GLB，不拼装武器或人物。
+
+原作人物保留。五个 Quaternius 动作（近战、重击、翻滚、防御、施术）从 holokat 的 CC0 动作银行提取，经其源骨架元数据在世界空间重定向到原作 Mixamo/Tripo 骨骼。既有走路、跑步、剧情动作不替换；损伤接触帧与近战前摇对齐。机甲使用原模型自身的 Idle、Walk、Shoot、HitRecieve、Death 动作，不套用人的骨架。
+
+命中特效使用 holokat MIT 火花与烟雾图集，固定池复用。来源、转换方式与 SHA-256 记录在 `assets/combat-provenance.json`；许可证随 APK 的 `assets/licenses` 打包。现阶段未导入全部 120+/130+ 动作；第一人称手臂、专属持枪和换弹角色动作仍需合适资源和适配，当前换弹展示为武器位移。

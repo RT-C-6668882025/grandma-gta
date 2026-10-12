@@ -70,6 +70,7 @@ addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; cam
 setScene(scene);
 setVehicleScene(scene);
 
+let mode = 'loading', hudT = 0, saveT = 0, time = 0, stepDist = 0, dt = 0;
 const loadmsg = document.getElementById('loadmsg');
 const startButtons = ['bNew', 'bCont'].map(id => document.getElementById(id));
 startButtons.forEach(button => { button.disabled = true; });
@@ -81,7 +82,6 @@ let player = null, sky = null, orbit = null, rain = null, grass = null, birds = 
 const audio = new Audio();
 const law = createLawSystem();
 const combatDemo = createCombatDemo({scene,camera,ground:heightAt,getPlayer:()=>player,getOrbit:()=>orbit,log:(message,details={})=>event(G.economy,'战斗',message,details),toast:message=>ui.toast(message),blips,getProgress:()=>G.combatProgress,setProgress:p=>{G.combatProgress=p;},saveProgress:()=>doSave(),sound:name=>audio.play(name,.45),reward:()=>{const amount=Math.min(100,G.economy.bank);if(amount>0&&transfer(G.economy,'bank','player',amount,'源核据点首次完成奖励')){G.money=G.economy.player;return amount;}return 0;}});
-let mode = 'loading', hudT = 0, saveT = 0, time = 0, stepDist = 0, dt = 0;
 const lights = [];
 const ctx = { get time() { return time; }, get dt() { return dt; }, audio, scene, fade: (on) => ui.fade(on), openBackpack: () => openBackpack() };
 

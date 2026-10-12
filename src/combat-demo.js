@@ -1,3 +1,6 @@
+import {makeWear} from './gear.js';
+import {regionAt} from './city-regions.js';
+import {loadCombatAssets,combatModel,createCombatEffects,createMechActor} from './combat-assets.js';
 import {Actor,hasKind} from './actor.js';
 import * as THREE from 'three';
 import {COMBAT_RULES,createCombatState,stepCombat,guardDamage} from './combat-core.js';
@@ -16,7 +19,9 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
   const material=color=>new THREE.MeshStandardMaterial({color,roughness:.45});
   const mesh=(geometry,color,parent,x,y,z)=>{const m=new THREE.Mesh(geometry,material(color));m.position.set(x,y,z);parent.add(m);return m;};
   const gun=new THREE.Group();view.add(gun);
-  // Weapon meshes wait for authored GLB assets; keep only gameplay feedback.
+  let assetReady=false,weaponName='源核手枪',weaponSkin=null,handWeapon=null,handBat=null,handMode=null;
+  const assetLoad=loadCombatAssets().then(()=>{const bat=combatModel('bat');if(bat){bat.position.set(.3,-.28,-.65);bat.rotation.x=.7;blade.add(bat);}assetReady=!!combatModel('pistol');});
+  const effects=createCombatEffects(scene);
   const blade=new THREE.Group();view.add(blade);
   const flash=new THREE.Mesh(new THREE.SphereGeometry(.09,6,4),new THREE.MeshBasicMaterial({color:0xffd778}));flash.position.set(.23,-.18,-.9);flash.visible=false;gun.add(flash);
   const hud=document.createElement('div');hud.id='combatDemoHUD';hud.hidden=true;
@@ -25,7 +30,7 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
   let active=false,state=createCombatState(),inputState=createCombatInput(),mission=createEncounterMission(),targets=[],devices=[],covers=[],saved=null;
   const ground=(x,z)=>baseGround(x,z)+(active?.35:0);
   let flashTime=0,hitTime=0,hurtTime=0,noise=null,radio=null,trace=0,access=false,claimed=false,cameraSuspicion=0,elapsed=0;
-  let cameraTriggered=false;
+  let cameraTriggered=false,emptyNotified=false;
   let fallbackProgress=normalizeCombatProgress();
   const progress=()=>normalizeCombatProgress(getProgress?.()||fallbackProgress);
   const persist=p=>{fallbackProgress=p;setProgress?.(p);};
@@ -38,17 +43,17 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
   function missionAction(action,extra={}){mission=stepEncounterMission(mission,action,extra,0);}
   function noiseAt(radius,loud){const p=getPlayer();noise={x:p.pos.x,z:p.pos.z,radius,loud,left:.3};}
   function hit(t,amount,quiet=false){
-    if(t.hp<=0)return;t.hp=Math.max(0,t.hp-amount);t.flash=.18;hitTime=.18;sound('hit');
+    if(t.hp<=0)return;const dealt=Math.min(t.hp,amount);t.hp=Math.max(0,t.hp-amount);log('命中安保：伤害 '+dealt+'，剩余 '+t.hp+' HP',{target:t.id,damage:dealt,quiet});t.flash=.18;hitTime=.18;sound('hit');
     if(!quiet)t.hit=true;
-    t.actor.hurt();
+    t.actor.hurt();effects.emit(new THREE.Vector3(t.x,t.y,t.z),quiet?.2:.4);
     if(!t.hp){t.actor.knockDown();t.brain.mode='down';t.beam.visible=false;log('守卫失去行动能力',{target:t.id,quiet});}
   }
   function disposeStage(){for(const t of targets){t.actor.dispose();t.actor.mats.forEach(m=>m.dispose());}clearTag('combat-demo');group.traverse(o=>{o.geometry?.dispose();o.material?.dispose();});group.clear();targets=[];devices=[];covers=[];}
   function stop(){
     if(!active)return;const p=getPlayer(),o=getOrbit();active=false;group.visible=false;view.visible=false;hud.hidden=true;document.body.classList.remove('combat-active');
-    disposeStage();for(let i=blips.length-1;i>=0;i--)if(blips[i].combatMarker)blips.splice(i,1);
+    effects.clear();disposeStage();for(let i=blips.length-1;i>=0;i--)if(blips[i].combatMarker)blips.splice(i,1);
     p.queued=false;if(p.actor.cur){p.actor.cur.a.stop();p.actor.cur=null;}
-    p.pos.copy(saved.pos);p.heading=saved.heading;p.vel.set(0,0,0);p.hp=saved.hp;p.down=false;p.stamina=saved.stamina;p.walkMode=saved.walkMode;p.combatCrouch=false;p.combatFloorOffset=0;p.actor.getUp();p.actor.root.visible=true;
+    p.pos.copy(saved.pos);p.heading=saved.heading;p.vel.set(0,0,0);p.hp=saved.hp;p.down=false;p.stamina=saved.stamina;p.walkMode=saved.walkMode;p.combatCrouch=false;p.combatFloorOffset=0;p.actor.getUp();p.actor.wear('weapon',saved.weapon);handWeapon=handBat=null;handMode=null;p.actor.root.visible=true;
     o.setMode(saved.mode);o.yaw=saved.yaw;o.pitch=saved.pitch;camera.fov=58;camera.updateProjectionMatrix();
     log('离开源核据点',{result:mission.phase,route:mission.route});saveProgress();toast('已返回原位置');
   }
@@ -56,8 +61,10 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
   function start(){
     if(active){stop();return;}
     const p=getPlayer(),o=getOrbit();if(!p||p.veh||p.down||o.override||p.actor.busy){toast('请先结束当前动作并下车');return false;}
-    saved={pos:p.pos.clone(),heading:p.heading,hp:p.hp,stamina:p.stamina,walkMode:p.walkMode,mode:o.mode,yaw:o.yaw,pitch:o.pitch};p.walkMode=false;
-    state=createCombatState();inputState=createCombatInput();mission=createEncounterMission();flashTime=hitTime=hurtTime=elapsed=trace=cameraSuspicion=0;noise=radio=null;access=claimed=cameraTriggered=false;
+    const region=regionAt(p.pos.x,p.pos.z).id,kind=region==='dongbu'?'rifle':region==='chengwan'?'tech':'pistol';if(weaponSkin)gun.remove(weaponSkin);weaponSkin=combatModel(kind)||combatModel('pistol');if(weaponSkin){weaponSkin.position.set(.24,-.23,-.62);weaponSkin.rotation.y=kind==='tech'?Math.PI:-Math.PI/2;gun.add(weaponSkin);}weaponName=kind==='rifle'?'东埠试验枪':kind==='tech'?'澄湾能量枪':'榆庭制式枪';
+    saved={weapon:p.actor.gear.weapon?.obj||null,pos:p.pos.clone(),heading:p.heading,hp:p.hp,stamina:p.stamina,walkMode:p.walkMode,mode:o.mode,yaw:o.yaw,pitch:o.pitch};p.walkMode=false;handWeapon=combatModel(kind)||combatModel('pistol');if(handWeapon)handWeapon.rotation.y=kind==='tech'?0:Math.PI/2;handBat=makeWear('bat',p.actor.t.attach.weapon);handMode=null;
+    state=createCombatState();inputState=createCombatInput();mission=createEncounterMission();flashTime=hitTime=hurtTime=elapsed=trace=cameraSuspicion=0;noise=radio=null;access=claimed=cameraTriggered=emptyNotified=false;
+    if(!assetReady){assetLoad.then(()=>toast('战斗资源已就绪，请再次进入'));toast('正在载入战斗资源');return false;}
     if(!hasKind('thug2')){toast('守卫模型尚未就绪，请稍后再试');return false;}
     active=true;p.hp=p.maxHp;p.combatFloorOffset=.35;p.queued=false;group.visible=true;hud.hidden=false;document.body.classList.add('combat-active');
     p.pos.set(EXIT.x,ground(EXIT.x,EXIT.z),EXIT.z);p.vel.set(0,0,0);o.setMode('first');o.yaw=0;o.pitch=0;
@@ -75,7 +82,7 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
     for(const x of [-12,12]){objectBox(x,166,2,.7,3,0xc3b79e);mesh(new THREE.SphereGeometry(.85,8,6),0x527459,group,x,ground(x,166)+1.4,166);}
     const locations=[[-8,185,'cover'],[8,177,'flank'],[0,169,'cover']];
     for(const [i,[x,z,role]] of locations.entries()){
-      const y=ground(x,z),actor=new Actor('thug2'),root=actor.root;root.position.set(x,y,z);group.add(root);
+      const y=ground(x,z),actor=(i===2?createMechActor():null)||new Actor('thug2'),root=actor.root;const rifle=combatModel('rifle');if(rifle&&actor.wear){rifle.rotation.y=Math.PI/2;actor.wear('weapon',rifle);}root.position.set(x,y,z);group.add(root);
       const beam=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]),new THREE.LineBasicMaterial({color:0xff795b}));beam.visible=false;group.add(beam);
       targets.push({id:'guard:'+i,x,y:y+1.1,z,radius:.75,hp:85,root,actor,beam,beamTime:0,flash:0,disabled:0,brain:createGuardBrain('guard:'+i,role),heading:0,home:{x,z},path:[],pathTimer:0,hit:false});
     }
@@ -114,7 +121,7 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
         if(!devices.find(d=>d.id==='relay').disabled)radio={...t.brain.lastKnown,left:.2};
       }
       if(e.type==='windup'){/* Timing feedback stays in the HUD and attack beam. */}
-      if(e.type==='fire'){
+      if(e.type==='fire'){t.actor.fire?.();
         const a=new THREE.Vector3(t.x,t.y+.1,t.z),b=new THREE.Vector3(e.at.x,ground(e.at.x,e.at.z)+.9,e.at.z);
         const dir=b.clone().sub(a).normalize(),range=a.distanceTo(b)+2;
         t.beam.geometry.setFromPoints([a,b]);t.beamTime=.12;t.beam.visible=true;sound('bonk');
@@ -131,7 +138,7 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
       }
     }
 
-    const dest=r.destination;let walking=false;
+    const dest=r.destination;let walking=false;t.actor.speed=0;
     if(dest){
       t.pathTimer-=dt;if(t.pathTimer<=0){t.pathTimer=.8;t.path=encounterRoute(t,dest,BOUNDS,(a,b)=>segmentBlock(a.x,ground(a.x,a.z)+.4,a.z,b.x,ground(b.x,b.z)+.4,b.z)<1);}
       while(t.path.length&&Math.hypot(t.path[0].x-t.x,t.path[0].z-t.z)<.45)t.path.shift();
@@ -176,29 +183,30 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
     state=result.state;p.stamina=state.stamina;
     for(const e of result.events){
       if(e.type==='shot'){
-        flashTime=.055;o.pitch=Math.max(-1.5,o.pitch-.016);sound('bonk');noiseAt(32,true);missionAction('shot');
+        p.heading=Math.atan2(-Math.sin(o.yaw),-Math.cos(o.yaw));p.actor.heading=p.heading;log('开火 · '+weaponName+' · 剩余弹药 '+state.ammo,{ammo:state.ammo});flashTime=.055;o.pitch=Math.max(-1.5,o.pitch-.016);sound('bonk');noiseAt(32,true);missionAction('shot');
         if(picked?.brain){
           const impact=rayTarget(origin,direction,[picked],35,obstruction(35));
           const headshot=impact&&origin.y+direction.y*impact.distance>picked.y+.4;
           hit(picked,Math.round((progress().perks.includes('marksman')?30:24)*(headshot?1.6:1)));
         }
-      }else if(e.type==='meleeStarted'){
-        p.heading=Math.atan2(-Math.sin(o.yaw),-Math.cos(o.yaw));p.actor.play(e.heavy?'kick':'jab',{dur:e.heavy?1:.5});sound('whoosh');
+      }else if(e.type==='empty'){if(!emptyNotified){toast('弹匣已空 · 按 R 或点击换弹');emptyNotified=true;}}else if(e.type==='reloadStarted'){log('开始换弹');
+      }else if(e.type==='meleeStarted'){log(e.heavy?'发动重击':'发动近战攻击');
+        p.heading=Math.atan2(-Math.sin(o.yaw),-Math.cos(o.yaw));p.actor.play(p.actor.has(e.heavy?'combatHeavy':'combatLight')?(e.heavy?'combatHeavy':'combatLight'):(e.heavy?'kick':'jab'),{dur:e.heavy?1:.5});sound('whoosh');
       }else if(e.type==='meleeContact'){
         aim();const victim=targets.filter(t=>t.hp>0&&Math.hypot(t.x-p.pos.x,t.z-p.pos.z)<2.4&&visible(origin,t)&&
           (direction.x*(t.x-p.pos.x)+direction.z*(t.z-p.pos.z))>.3).sort((a,b)=>Math.hypot(a.x-p.pos.x,a.z-p.pos.z)-Math.hypot(b.x-p.pos.x,b.z-p.pos.z))[0];
         if(victim){hit(victim,e.heavy?45:24);noiseAt(9,false);}
-      }else if(e.type==='dodge'){
-        const len=Math.hypot(move.x,move.z),dx=len?move.x/len:-Math.sin(o.yaw),dz=len?move.z/len:-Math.cos(o.yaw);
-        for(let i=0;i<12;i++){const [x,z]=resolve(p.pos.x+dx*.12,p.pos.z+dz*.12,p.r,p.pos.y);p.pos.x=Math.max(BOUNDS.minX,Math.min(BOUNDS.maxX,x));p.pos.z=Math.max(BOUNDS.minZ,Math.min(BOUNDS.maxZ,z));}p.pos.y=ground(p.pos.x,p.pos.z);sound('whoosh');
-      }else if(e.type==='hackStarted'){trace=Math.min(1,trace+.25);log('开始快速破解',{target:e.target});}
+      }else if(e.type==='dodge'){log('闪避：打断当前动作');
+        const len=Math.hypot(move.x,move.z),dx=len?move.x/len:-Math.sin(o.yaw),dz=len?move.z/len:-Math.cos(o.yaw);p.heading=Math.atan2(dx,dz);p.actor.heading=p.heading;
+        for(let i=0;i<12;i++){const [x,z]=resolve(p.pos.x+dx*.12,p.pos.z+dz*.12,p.r,p.pos.y);p.pos.x=Math.max(BOUNDS.minX,Math.min(BOUNDS.maxX,x));p.pos.z=Math.max(BOUNDS.minZ,Math.min(BOUNDS.maxZ,z));}p.pos.y=ground(p.pos.x,p.pos.z);if(p.actor.has('combatDodge'))p.actor.play('combatDodge',{dur:COMBAT_RULES.dodgeTime});sound('whoosh');
+      }else if(e.type==='hackStarted'){if(p.actor.has('combatHack'))p.actor.play('combatHack',{dur:COMBAT_RULES.hackTime});trace=Math.min(1,trace+.25);log('开始快速破解',{target:e.target});}
       else if(e.type==='hackApply'){
         missionAction('hack');const subject=[...targets,...devices].find(t=>t.id===e.target);
         if(subject?.brain){subject.disabled=8;hit(subject,25,true);log('快速破解：武器故障',{target:e.target,duration:8});}
         else if(subject?.id==='relay'){access=true;targets.forEach(t=>t.disabled=8);devices.forEach(t=>t.disabled=10);log('接管中继器：安保武器与监控暂时停用');toast('中继器已接管 · 终端远程访问开放');}
         else if(subject?.id==='camera'){subject.disabled=18;log('监控停用 18 秒');}
         else if(subject?.id==='terminal'){missionAction('retrieve',{authorized:true});log('远程提取源核芯片');toast('芯片已取得 · 返回入口撤离');}
-      }else if(e.type==='reloaded')sound('click');
+      }else if(e.type==='reloaded'){emptyNotified=false;log('换弹完成 · 装入 '+e.count+' 发',{ammo:state.ammo,reserve:state.reserve});sound('click');}
     }
     if(state.scanning)trace=Math.max(0,trace-dt*.015);else trace=Math.max(0,trace-dt*.06);
     if(trace>=1){radio={x:p.pos.x,z:p.pos.z,left:.2};trace=.5;log('破解暴露：安保定位到源核信号');}
@@ -216,7 +224,10 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
     mission=stepEncounterMission(mission,Math.hypot(p.pos.x-EXIT.x,p.pos.z-EXIT.z)<2.5?'extract':null,{atExit:true,dead:p.down},dt);
     if(mission.phase==='complete'&&phaseBefore!=='complete')complete();
     flashTime=Math.max(0,flashTime-dt);hitTime=Math.max(0,hitTime-dt);hurtTime=Math.max(0,hurtTime-dt);flash.visible=flashTime>0;
-    view.visible=o.mode==='first';gun.visible=state.weapon==='gun';blade.visible=!gun.visible;
+    effects.update(dt);if(handMode!==state.weapon){p.actor.wear('weapon',state.weapon==='gun'?handWeapon:handBat);handMode=state.weapon;}
+    if(state.mode==='blocking'&&p.actor.has('combatBlock')&&p.actor.moving!=='combatBlock')p.actor.play('combatBlock');
+    else if(state.mode!=='blocking'&&p.actor.moving==='combatBlock')p.actor.stopMove();
+    view.visible=o.mode==='first'&&!o.override;gun.visible=state.weapon==='gun';blade.visible=!gun.visible;
     const reloadArc=state.mode==='reloading'?Math.sin(Math.PI*(1-state.action.remaining/COMBAT_RULES.reloadTime)):0;
     gun.position.x=state.aiming?-.23:-.02;gun.position.z=-.14+(flashTime?flashTime*.7:0);
     gun.rotation.z=-.45*reloadArc;gun.position.y=(state.aiming?.12:0)-.16*reloadArc;
@@ -224,10 +235,10 @@ export function createCombatDemo({scene,camera,ground:baseGround,getPlayer,getOr
     view.position.y=Math.sin(elapsed*8)*Math.hypot(move.x,move.z)*.007;
     const fov=state.aiming?44:58;if(camera.fov!==fov){camera.fov=fov;camera.updateProjectionMatrix();}
     hud.hidden=false;hud.querySelector('.combat-hitmark').style.opacity=hitTime?'1':'0';hud.querySelector('.combat-damage').style.opacity=hurtTime?'1':'0';
-    hud.querySelector('.combat-readout').textContent=`${state.weapon==='gun'?'源核手枪':'近战'} · 弹药 ${state.ammo}/${state.reserve} · 体力 ${Math.floor(state.stamina)} · 算力 ${state.ram.toFixed(1)}${inputState.crouch?' · 潜行':''}${state.mode==='reloading'?' · 换弹中':''}`;
+    hud.querySelector('.combat-readout').textContent=`${state.weapon==='gun'?weaponName:'近战'} · 弹药 ${state.ammo}/${state.reserve} · 体力 ${Math.floor(state.stamina)} · 算力 ${state.ram.toFixed(1)}${inputState.crouch?' · 潜行':''}${state.mode==='reloading'?' · 换弹中':''}`;
     const highest=Math.max(cameraSuspicion,...targets.map(t=>t.hp?t.brain.suspicion:0));
     hud.querySelector('.combat-objective').textContent=mission.phase==='complete'?`完成 · ${mission.route} · 点“撤离据点”返回`:mission.phase==='extract'?'芯片已取得 · 返回入口绿色圆环撤离':`目标：取回后方终端的源核芯片 · 警戒 ${Math.round(highest*100)}%`;
-    hud.querySelector('.combat-target').textContent=inputState.scan?`扫描：${picked?picked.id==='relay'?'中继器 · E 接管':picked.id==='camera'?'监控 · E 停用':picked.id==='terminal'?access?'芯片终端 · E 远程提取':'终端加密 · 先接管中继器':'安保 · E 武器故障':'无目标'} · 追踪 ${Math.round(trace*100)}%`:picked?.brain?`${picked.brain.mode==='combat'?'交战':picked.brain.mode==='search'?'搜索':picked.brain.mode==='suspicious'?'怀疑':'巡逻'} · 安保 ${picked.hp} HP`:'Ctrl 潜行 · Q 扫描 · E 操作/背后处置 · 3 切换武器';
+    hud.querySelector('.combat-target').textContent=inputState.scan?`扫描：${picked?picked.id==='relay'?'中继器 · E 接管':picked.id==='camera'?'监控 · E 停用':picked.id==='terminal'?access?'芯片终端 · E 远程提取':'终端加密 · 先接管中继器':'安保 · E 武器故障':'无目标'}${picked&&Math.hypot(picked.x-p.pos.x,picked.z-p.pos.z)>18?' · 超出破解距离':state.nextHack>state.clock?' · 冷却 '+(state.nextHack-state.clock).toFixed(1)+' 秒':state.ram<(progress().perks.includes('efficientHack')?2:3)?' · 算力不足':''} · 追踪 ${Math.round(trace*100)}%`:picked?.brain?`${picked.brain.mode==='combat'?'交战':picked.brain.mode==='search'?'搜索':picked.brain.mode==='suspicious'?'怀疑':'巡逻'} · 安保 ${picked.hp} HP`:'Ctrl 潜行 · Q 扫描 · E 操作/背后处置 · 3 切换武器';
   }
-  return {start,stop,update,get active(){return active;},get state(){return state;},get targets(){return targets;},get device(){return devices.find(d=>d.id==='relay');},get devices(){return devices;},get mission(){return mission;},get crouched(){return inputState.crouch;},get scanning(){return inputState.scan;}};
+  return {start,stop,update,get assetsReady(){return assetReady;},get active(){return active;},get state(){return state;},get targets(){return targets;},get device(){return devices.find(d=>d.id==='relay');},get devices(){return devices;},get mission(){return mission;},get crouched(){return inputState.crouch;},get scanning(){return inputState.scan;}};
 }
