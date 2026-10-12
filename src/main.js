@@ -1,3 +1,6 @@
+import {worldService} from './world-economy.js';
+import {createStreetCombat} from './street-combat.js';
+import {streetInjury} from './street-consequences.js';
 import {dressDistrictCenters} from './world/urban-dressing.js';
 import {districtDestinations} from './world/urban-plan.js';
 import {createCombatDemo} from './combat-demo.js';
@@ -82,6 +85,9 @@ let player = null, sky = null, orbit = null, rain = null, grass = null, birds = 
 const audio = new Audio();
 const law = createLawSystem();
 const combatDemo = createCombatDemo({scene,camera,ground:heightAt,getPlayer:()=>player,getOrbit:()=>orbit,log:(message,details={})=>event(G.economy,'战斗',message,details),toast:message=>ui.toast(message),blips,getProgress:()=>G.combatProgress,setProgress:p=>{G.combatProgress=p;},saveProgress:()=>doSave(),sound:name=>audio.play(name,.45),reward:()=>{const amount=Math.min(100,G.economy.bank);if(amount>0&&transfer(G.economy,'bank','player',amount,'源核据点首次完成奖励')){G.money=G.economy.player;return amount;}return 0;}});
+const streetCombat=createStreetCombat({scene,camera,getPlayer:()=>player,getOrbit:()=>orbit,getEntities:()=>ents,log:message=>event(G.economy,'街头冲突',message,{location:player?{x:player.pos.x,z:player.pos.z}:undefined}),injure:(n,damage)=>streetInjury(G.economy,n.economyId,damage,{x:n.pos.x,z:n.pos.z}),wanted:addWanted,toast:message=>ui.toast(message),sound:name=>audio.play(name,.45),canUse:()=>!combatDemo.active&&!inputLocked()&&!dance.on&&!env.truce&&!MOD.fly,getAmmo:()=>G.streetAmmo,setAmmo:ammo=>{G.streetAmmo=ammo;}});
+const combatActive=()=>combatDemo.active||streetCombat.active;
+const activeCombat=()=>combatDemo.active?combatDemo:streetCombat;
 const lights = [];
 const ctx = { get time() { return time; }, get dt() { return dt; }, audio, scene, fade: (on) => ui.fade(on), openBackpack: () => openBackpack() };
 
@@ -129,7 +135,7 @@ async function boot() {
 
 async function start(cont) {
   if (mode !== 'title') return;
-  combatDemo.stop();
+  streetCombat.stop();combatDemo.stop();
   mode = 'starting';
   startButtons.forEach(button => { button.disabled = true; });
   loadmsg.textContent = '正在準備遊戲……';
@@ -243,7 +249,7 @@ function exitVehicle() {
 
 // ------------------------------------------------------------------ backpack
 function openBackpack() {
-  unlock();
+  streetCombat.stop();unlock();
   ui.backpack({ equip: (s, id) => { equip(s, id); audio.play('pickup'); }, use: (id) => useItem(id) });
 }
 
@@ -316,7 +322,7 @@ ui.mapData=()=>({markers:[...regionMarkers(),...districtDestinations(),...(G.eco
 const clock = new THREE.Clock();
 let prNow = prMax, frAcc = 0, frN = 0;
 let touchInteraction = '互动';
-const updateTouch = initTouch(canvas, () => ({ active: mode === 'play', playing: mode === 'play' && !ui.open && !inputLocked() && !dance.on && !player?.down, dancing: dance.on && !ui.open, driving: !!player?.veh, combat:combatDemo.active, crouched:combatDemo.crouched, scanning:combatDemo.scanning, interaction: touchInteraction, toast: message => ui.toast(message) }));
+const updateTouch = initTouch(canvas, () => ({ active: mode === 'play', playing: mode === 'play' && !ui.open && !inputLocked() && !dance.on && !player?.down, dancing: dance.on && !ui.open, driving: !!player?.veh, combat:combatActive(), street:streetCombat.active, crouched:activeCombat().crouched, scanning:activeCombat().scanning, interaction: touchInteraction, toast: message => ui.toast(message) }));
 const updateDisplay = initDisplay(canvas, () => ({ playing: mode === 'play' && !ui.open && !inputLocked() && !dance.on }));
 function frame() {
   updateDisplay();
@@ -371,10 +377,11 @@ function step(d) {
   } else if (ui.open === 'map' && hit('KeyM')) ui.close();
   else if (ui.open === 'panel' && hit('Tab', 'KeyI')) ui.close();
   const playing = !ui.open && !locked && !player.down;
+  if(playing&&!combatDemo.active&&hit('Digit1'))streetCombat.toggle();
   if (playing && hit('KeyC')) switchCamera();
   if (!ui.open && !locked) {
     pollMouseLook(d);
-    const lookScale=combatDemo.active?(combatDemo.state.aiming?.45:combatDemo.scanning?.65:1):1;
+    const lookScale=combatActive()?(activeCombat().state.aiming?.45:activeCombat().scanning?.65:1):1;
     orbit.input(mouse.dx*lookScale, mouse.dy*lookScale, mouse.wheel);
     if (playing && hit('KeyZ')) orbit.recenter(player.veh ? player.veh.heading : player.heading);
   }
@@ -425,18 +432,18 @@ function step(d) {
     flyAxis: playing && MOD.fly ? (down('PageUp') ? 1 : 0) - (down('PageDown') ? 1 : 0) : 0,
     move: { x: f.x * fw + r.x * rt, z: f.z * fw + r.z * rt },
     sprint: playing && down('ShiftLeft', 'ShiftRight'),
-    attack: !combatDemo.active && combat.attack,
-    combatMode: combatDemo.active,
-    throw: !combatDemo.active && combat.throw,
+    attack: !combatActive() && combat.attack,
+    combatMode: combatActive(),
+    throw: !combatActive() && combat.throw,
     target: target && target.distTo(player) < 3.2 ? target : null,
     aim: f,
   };
   if (ctl.throw) ctl.target = target;
-  if (playing && !combatDemo.active && hit('KeyQ') && !player.veh) { player.walkMode = !player.walkMode; ui.toast(player.walkMode ? '痞步模式 😎' : '正常走路'); }
+  if (playing && !combatActive() && hit('KeyQ') && !player.veh) { player.walkMode = !player.walkMode; ui.toast(player.walkMode ? '痞步模式 😎' : '正常走路'); }
   if (playing && hit('KeyX')) player.lightUp();
   if (playing && hit('KeyH')) { const id = ['bolida', 'bread', 'soda'].find((k) => count(k) > 0); if (id) useItem(id); else ui.toast('沒有吃的喝的。柑仔店有寶力大補。', true); }
   if (playing && hit('KeyB')) useItem('betel');
-  if (playing && !combatDemo.active && !MOD.fly && hit('Space') && !player.veh && !player.actor.busy) { player.actor.play(['angry', 'complain', 'laugh', 'fold'][Math.floor(Math.random() * 4)], { dur: 2.2 }); bark(['hit2', 'm3_ama1', 'lottery_lose'][Math.floor(Math.random() * 3)]); for (const e of ents) if (e.role === 'ped' && e.distTo(player) < 8) { e.state = 'flee'; e.fleeT = 3; } }
+  if (playing && !combatActive() && !MOD.fly && hit('Space') && !player.veh && !player.actor.busy) { player.actor.play(['angry', 'complain', 'laugh', 'fold'][Math.floor(Math.random() * 4)], { dur: 2.2 }); bark(['hit2', 'm3_ama1', 'lottery_lose'][Math.floor(Math.random() * 3)]); for (const e of ents) if (e.role === 'ped' && e.distTo(player) < 8) { e.state = 'flee'; e.fleeT = 3; } }
   // ---------- simulate
   if(combatDemo.active) {
     combatDemo.update(d,{attackHeld:mouse.left||down('KeyJ'),attackPressed:mouse.clickL||hit('KeyJ'),aimHeld:mouse.right||down('KeyG'),scanPressed:hit('KeyQ'),crouchPressed:hit('ControlLeft','ControlRight'),interactPressed:hit('KeyE'),reloadPressed:hit('KeyR'),dodgePressed:hit('Space'),swapPressed:hit('Digit3'),weapon:hit('Digit1')?'gun':hit('Digit2')?'melee':null,heavyPressed:hit('KeyK'),sprint:ctl.sprint},playing,ctl.move);
@@ -444,7 +451,11 @@ function step(d) {
     if(combatDemo.crouched){ctl.move.x*=.48;ctl.move.z*=.48;ctl.sprint=false;}
     if(combatDemo.state.mode==='dodging'||combatDemo.state.mode==='meleeWindup'||combatDemo.state.mode==='meleeRecovery')ctl.move={x:0,z:0};
   }
-  if(combatDemo.active)ctl.combatHeading=Math.atan2(-Math.sin(orbit.yaw),-Math.cos(orbit.yaw));
+  if(combatActive())ctl.combatHeading=Math.atan2(-Math.sin(orbit.yaw),-Math.cos(orbit.yaw));
+  streetCombat.update(d,{attackHeld:mouse.left||down('KeyJ'),attackPressed:mouse.clickL||hit('KeyJ'),aimHeld:mouse.right||down('KeyG'),reloadPressed:hit('KeyR'),crouchPressed:hit('ControlLeft','ControlRight'),dodgePressed:hit('Space'),holster:hit('Digit2','Digit3')},playing);
+  if(streetCombat.active&&streetCombat.crouched){ctl.sprint=false;ctl.move.x*=.48;ctl.move.z*=.48;}
+  if(streetCombat.active&&streetCombat.state.mode==='dodging')ctl.move={x:0,z:0};
+  if(streetCombat.active&&streetCombat.state.aiming){ctl.sprint=false;ctl.move.x*=.65;ctl.move.z*=.65;}
   player.update(d, ctl);
   for (const e of ents) {
     if (e === player) continue;
@@ -499,14 +510,14 @@ function step(d) {
   // ---------- world, camera, hud
   sky.update(d, player.pos, true, WX);
   tickWorld(d, player.pos);
-  orbit.update(d, player.pos, (combatDemo.active&&combatDemo.crouched?.95:1.45) + (player.veh ? 0.6 : 0), {
+  orbit.update(d, player.pos, (combatActive()&&activeCombat().crouched?.95:1.45) + (player.veh ? 0.6 : 0), {
     heading: player.veh ? player.veh.heading : player.heading,
     moving: playing && (player.veh ? Math.abs(player.veh.speed) > .5 : fw > 0 && rt === 0),
-    combat:combatDemo.active,aiming:combatDemo.state.aiming,
+    combat:combatActive(),aiming:activeCombat().state.aiming,
     vehicleDistance: player.veh ? (player.veh.def.car ? 6 : 4.5) : 0,
   });
   const firstPerson = orbit.mode === 'first' && !orbit.override;
-  player.actor.root.visible = !firstPerson && !(combatDemo.active&&camera.position.distanceTo(player.actor.headPos())<.5);
+  player.actor.root.visible = !firstPerson && !(combatActive()&&camera.position.distanceTo(player.actor.headPos())<.5);
   if (player.veh && firstPerson) player.veh.root.visible = false;
   document.getElementById('cameraButton').textContent = CAMERA_LABELS[orbit.mode] + ' · C';
   ui.camYaw = orbit.yaw;
@@ -554,7 +565,7 @@ function tickWorld(d, focus) {
 
 function switchCamera() {
   if (mode !== 'play' || !orbit || inputLocked() || dance.on || ui.open) return;
-  if(combatDemo.active){const pitch=orbit.pitch;orbit.setMode(orbit.mode==='third'?'first':'third');orbit.pitch=Math.max(-1.45,Math.min(1.45,pitch));}else orbit.cycleMode(); ui.toast(CAMERA_LABELS[orbit.mode]);
+  if(combatActive()){const pitch=orbit.pitch;orbit.setMode(orbit.mode==='third'?'first':'third');orbit.pitch=Math.max(-1.45,Math.min(1.45,pitch));}else orbit.cycleMode(); ui.toast(CAMERA_LABELS[orbit.mode]);
 }
 document.getElementById('cameraButton').onclick = switchCamera;
 function openPowers() {
@@ -720,7 +731,7 @@ window.__ama = {
   enter(v) { enterVehicle(v); }, exit() { exitVehicle(); },
   info() { return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, ents: ents.length, veh: vehicles.length }; },
   story: () => import('./story.js'),
-  audio, camera, scene, combatDemo,
+  audio, camera, scene, combatDemo,streetCombat,
 };
 boot().then(() => requestAnimationFrame(frame)).catch((e) => { loadmsg.textContent = '載入失敗：' + e.message; console.error(e); });
 
@@ -728,8 +739,8 @@ const worldBindings=createWorldBindings();let worldSyncTimer=0,dashboardTimer=0;
 function openWorldDashboard(){unlock();openDevelopment({ui,e:G.economy,step:()=>economyRound(G.economy),save:doSave,navigate:navigateTo,teleport:teleportTo,recruit:recruitResidents,journal:()=>openJournal(ui,G.economy),enableCoins:()=>setCoinMode(G.economy,true),legacy:openLegacyEconomy,openShop:id=>districtScene.open(id),issue:()=>issueMoney(G.economy)});}
 function updateEconomyHUD(){
   let bar=document.getElementById('gameBar');
-  if(!bar){bar=document.createElement('div');bar.id='gameBar';bar.innerHTML='<button id="economyLiveHUD"></button><button id="districtButton">店铺</button><button id="governmentButton">政府</button><button id="worldLogButton">日志</button><button id="combatDemoButton">源核据点</button><button id="gameMenuToggle">菜单 ▾</button>';document.body.append(bar);bar.append(document.getElementById('displayTools'));const tools=document.querySelector('.touch-tools');if(tools)bar.append(tools);bar.querySelector('#economyLiveHUD').onclick=openWorldDashboard;bar.querySelector('#districtButton').onclick=()=>districtScene.open('shop');bar.querySelector('#governmentButton').onclick=()=>districtScene.open('civic');bar.querySelector('#worldLogButton').onclick=()=>{unlock();openJournal(ui,G.economy);};bar.querySelector('#combatDemoButton').onclick=()=>{if(combatDemo.active||!inputLocked()&&!dance.on&&!G.wanted){combatDemo.start();updateTouch();}else ui.toast(G.wanted?'请先摆脱追捕':'请先结束当前剧情');};bar.querySelector('#gameMenuToggle').onclick=()=>bar.classList.toggle('expanded');}
-  bar.hidden=mode!=='play'||!!ui.open;bar.querySelector('#combatDemoButton').textContent=combatDemo.active?'撤离据点':'源核据点';const e=G.economy;
+  if(!bar){bar=document.createElement('div');bar.id='gameBar';bar.innerHTML='<button id="economyLiveHUD"></button><button id="districtButton">店铺</button><button id="governmentButton">政府</button><button id="worldLogButton">日志</button><button id="streetGunButton">拔枪 · 1</button><button id="streetAmmoButton">弹药 · NT$20</button><button id="combatDemoButton">源核据点</button><button id="gameMenuToggle">菜单 ▾</button>';document.body.append(bar);bar.append(document.getElementById('displayTools'));const tools=document.querySelector('.touch-tools');if(tools)bar.append(tools);bar.querySelector('#economyLiveHUD').onclick=openWorldDashboard;bar.querySelector('#districtButton').onclick=()=>districtScene.open('shop');bar.querySelector('#governmentButton').onclick=()=>districtScene.open('civic');bar.querySelector('#worldLogButton').onclick=()=>{unlock();openJournal(ui,G.economy);};bar.querySelector('#streetGunButton').onclick=()=>{streetCombat.toggle();updateTouch();};bar.querySelector('#streetAmmoButton').onclick=()=>{const e=G.economy,b=e.industries.hardware;if(!streetCombat.active||streetCombat.state.reserve>96||!b?.stock||!worldService(e,'hardware',20,'购买弹药')){ui.toast('请先拔枪；商店须营业、有库存且你有资金，备用弹药不能超过120发');return;}b.stock--;streetCombat.addAmmo();G.money=e.player;doSave();ui.toast('补充24发备用弹药');};bar.querySelector('#combatDemoButton').onclick=()=>{if(combatDemo.active||!inputLocked()&&!dance.on&&!G.wanted){streetCombat.stop();combatDemo.start();updateTouch();}else ui.toast(G.wanted?'请先摆脱追捕':'请先结束当前剧情');};bar.querySelector('#gameMenuToggle').onclick=()=>bar.classList.toggle('expanded');}
+  bar.hidden=mode!=='play'||!!ui.open;bar.querySelector('#streetGunButton').hidden=combatDemo.active;bar.querySelector('#streetGunButton').textContent=streetCombat.active?'收枪 · 2':'拔枪 · 1';bar.querySelector('#combatDemoButton').textContent=combatDemo.active?'撤离据点':'源核据点';const e=G.economy;
   if(e.world?.rateFeedbackSummary&&e.world.feedbackDisplayed!==e.world.rateFeedbackSummary){ui.toast(e.world.rateFeedbackSummary);e.world.feedbackDisplayed=e.world.rateFeedbackSummary;}
   bar.querySelector('#economyLiveHUD').textContent=`经济 ${e.round}轮 · GDP NT$${e.metrics.gdp||0} · 1 GOD = NT$${exchangeRate(e)}`;
 }

@@ -90,9 +90,10 @@ export function initTouch(canvas, state) {
     root.hidden = !enabled || !s.active; root.classList.toggle('controls-off',!controls); root.classList.toggle('blocked',!s.playing); root.classList.toggle('dancing',s.dancing);root.classList.toggle('combat-mode',!!s.combat);
     if (wasDriving !== !!s.driving) { wasDriving = !!s.driving; stopSprint(); root.classList.toggle('driving',wasDriving); }
     root.querySelector('.touch-actions [data-key="KeyE"]').textContent = s.driving ? '下车' : s.interaction || '互动';
-    for(const [key,label] of [['KeyG',s.combat?'瞄准 / 格挡':'投掷'],['Space',s.combat?'闪避':'刹车'],['KeyE',s.combat?'操作 / 处置':s.driving?'下车':s.interaction||'互动']]){const button=root.querySelector('.touch-actions [data-key="'+key+'"]');if(button)button.textContent=label;}
-    for(const key of ['KeyR','Digit1','Digit2','KeyQ','KeyK','ControlLeft','Digit3']){const button=root.querySelector('.touch-actions [data-key="'+key+'"]');if(button)button.hidden=!s.combat;}
-    for(const key of ['Digit1','Digit2','KeyK','KeyQ','KeyR','Space']){const button=root.querySelector('.touch-more [data-key="'+key+'"]');if(button)button.hidden=['Digit1','Digit2','KeyK'].includes(key)?!s.combat:!!s.combat;}
+    for(const [key,label] of [['KeyG',s.combat?(s.street?'瞄准':'瞄准 / 格挡'):'投掷'],['Space',s.combat?'闪避':'刹车'],['KeyE',s.combat?(s.street?'互动':'操作 / 处置'):s.driving?'下车':s.interaction||'互动']]){const button=root.querySelector('.touch-actions [data-key="'+key+'"]');if(button)button.textContent=label;}
+    for(const key of ['KeyR','Digit1','Digit2','KeyQ','KeyK','ControlLeft','Digit3']){const button=root.querySelector('.touch-actions [data-key="'+key+'"]');if(button)button.hidden=!s.combat||(s.street&&['KeyQ','KeyK'].includes(key));}
+    for(const key of ['Digit1','Digit2','KeyK','KeyQ','KeyR','Space']){const button=root.querySelector('.touch-more [data-key="'+key+'"]');if(button)button.hidden=['Digit1','Digit2','KeyK'].includes(key)?(!s.combat||!!s.street):!!s.combat;}
+    const stow=root.querySelector('.touch-actions [data-key="Digit3"]');if(stow)stow.textContent=s.street?'收枪':'切换';
     for(const [key,label] of [['ControlLeft',s.crouched?'起身':'潜行'],['KeyQ',s.scanning?'退出扫描':'扫描']]){const button=root.querySelector('.touch-actions [data-key="'+key+'"]');if(button)button.textContent=label;}
     document.body.classList.toggle('touch-device',enabled&&s.active);
     document.body.classList.toggle('touch-layout',enabled&&controls&&s.active);

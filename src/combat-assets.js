@@ -4,7 +4,9 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {loadModel} from './model-loader.js';
 const loader=new GLTFLoader(),templates=new Map();
 export const COMBAT_MODELS={pistol:{path:'assets/combat/toon-pistol.glb',length:.5},rifle:{path:'assets/combat/toon-ak.glb',length:.9},tech:{path:'assets/combat/weapon_rifle.glb',length:.7},bat:{path:'assets/gear/bat.glb',length:.65}};
-export async function loadCombatAssets(){
+let assetsPromise;
+export function loadCombatAssets(){return assetsPromise ||= buildCombatAssets();}
+async function buildCombatAssets(){
  const modelWork=Promise.allSettled(Object.entries(COMBAT_MODELS).map(async([id,def])=>{const gltf=await loadModel(loader,def.path);const model=gltf.scene;model.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());const holder=new THREE.Group();holder.add(model);model.position.sub(center);holder.scale.setScalar(def.length/Math.max(size.x,size.y,size.z));holder.name='authored:'+id;templates.set(id,holder);}));
  await Promise.all([modelWork,loadModel(loader,'assets/combat/mech-george.glb').then(g=>templates.set('mech',g)).catch(e=>console.warn('Mech asset unavailable',e))]);
 }

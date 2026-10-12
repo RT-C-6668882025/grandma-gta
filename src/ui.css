@@ -358,3 +358,5 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #111; color:
 .touch-layout #touchControls.combat-mode .touch-actions [data-key="ControlLeft"] { right:104px; bottom:172px; }
 .touch-layout #touchControls.combat-mode .touch-actions [data-key="Digit3"] { right:24px; bottom:172px; }
 @media(max-height:500px) { .combat-target { bottom:10px; max-width:45vw; font-size:10px; } .combat-objective { font-size:11px; top:24%; } .combat-readout { font-size:10px; max-width:72vw; } .combat-upgrades { top:32%; } }
+
+#streetCombatHUD{pointer-events:none;position:fixed;inset:0;z-index:12}#streetCombatHUD[hidden]{display:none}#gameBar:not(.expanded) #streetAmmoButton{display:none}

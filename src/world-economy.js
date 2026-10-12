@@ -1,3 +1,4 @@
+import {recoverStreetInjuries} from './street-consequences.js';
 import {regionAt} from './city-regions.js';
 import {initEffects,updatePrices,consumerPrice,redeemSavings,rateFeedback} from './economy-effects.js';
 import {ensureAgents,agentRound} from './town-agents.js';
@@ -69,7 +70,7 @@ export function fundAll(e,amount,currency='ntd'){
 function outputKind(s){return ['farm','food','tools','recycling'].includes(s);}
 export function worldRound(e){
   const w=e.world;if(!w?.enabled)return;
-  ensureIndustries(e);ensureAgents(e);updatePrices(e);const ds=w.places,active=e.households.filter(h=>h.active!==false).sort((a,b)=>(a.cash+(e.crypto.holders['h:'+a.id]||0)*exchangeRate(e))-(b.cash+(e.crypto.holders['h:'+b.id]||0)*exchangeRate(e))),rate=exchangeRate(e);
+  recoverStreetInjuries(e);ensureIndustries(e);ensureAgents(e);updatePrices(e);const ds=w.places,active=e.households.filter(h=>h.active!==false).sort((a,b)=>(a.cash+(e.crypto.holders['h:'+a.id]||0)*exchangeRate(e))-(b.cash+(e.crypto.holders['h:'+b.id]||0)*exchangeRate(e))),rate=exchangeRate(e);
   const bySector={};for(const d of ds)(bySector[d.sector] ||= []).push(d);
   const assets=w.assets||[],transport=assets.filter(a=>a.kind==='vehicle'&&a.available),livestock=assets.filter(a=>a.kind==='animal'&&a.available&&['rooster','goose','buffalo'].includes(a.type));
   const workingTransport=transport.filter(a=>a.moving||a.assigned).length;
@@ -79,7 +80,7 @@ export function worldRound(e){
   // Job vacancies follow existing scene roles. Residents may change employers when firms run out of cash.
   for(const h of active){
     const owner='h:'+h.id;h.hunger=Math.min(10,h.hunger+1);h.roundStartCash=h.cash;h.roundIncome=0;h.working=false;h.job='work';
-    if(h.unavailable||(e.government?.strike&&h.id%4===0)){m.unpaid++;continue;}
+    if(h.unavailable||e.round<(h.injuredUntil||0)||(e.government?.strike&&h.id%4===0)){m.unpaid++;continue;}
     const preferred=h.role==='cop'?'public':h.role==='driver'?'transport':h.role==='dancer'?'leisure':h.role==='farmer'?'farm':null;
     let candidates=preferred?(bySector[preferred]||[]):employable;
     const last=ds.find(d=>d.id===h.industry);
@@ -151,7 +152,7 @@ export function snapshotEconomy(e){
 }
 
 export function finishVisit(e,h){
- const visit=h.visit;if(!visit||h.unavailable)return false;const d=e.world.places.find(d=>d.id===visit.industry),b=e.industries[visit.industry];if(!d||!b){delete h.visit;return false;}const at=d.entrance||d;
+ const visit=h.visit;if(!visit||h.unavailable||e.round<(h.injuredUntil||0))return false;const d=e.world.places.find(d=>d.id===visit.industry),b=e.industries[visit.industry];if(!d||!b){delete h.visit;return false;}const at=d.entrance||d;
  if(!h.location||Math.hypot(h.location.x-at.x,h.location.z-at.z)>7)return false;
  delete h.visit;
  if(!b.open||!b.staff||b.stock<1){event(e,'消费',h.name+' 到达 '+d.name+'，因'+(!b.open?'停业':!b.staff?'无人营业':'缺货')+'未能消费',{industry:d.id,resident:h.id});return false;}

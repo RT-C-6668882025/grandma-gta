@@ -417,6 +417,7 @@ export class NPC extends Ent {
         if (!t || t.down || (t.veh && this.role !== 'cop') || this.distTo(t) > (this.role === 'cop' ? 60 : 40)) { this.state = 'idle'; this.stateT = 2; this.lastHitBy = null; break; }
         const d = this.distTo(t);
         if (t.veh) { this.steer(dt, t.pos.x, t.pos.z, 3.6); break; }
+        if(this.streetRanged&&d>=2&&d<22){this.steer(dt,this.pos.x,this.pos.z,0);this.faceTo(t.pos.x,t.pos.z,dt,10);break;}
         if (d > 1.35) this.steer(dt, t.pos.x, t.pos.z, d > 5 ? 3.4 : 1.8);
         else {
           this.steer(dt, this.pos.x, this.pos.z, 0); this.faceTo(t.pos.x, t.pos.z, dt, 10);
